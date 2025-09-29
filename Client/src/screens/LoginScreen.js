@@ -49,7 +49,9 @@ const LoginScreen = ({ navigation }) => {
       if (error.response.status == 401) {
         Toast.show("Invalid email or password")
       }
-      console.error("Error: ", error)
+      if(error.response.status == 404){
+        Toast.show("User does exist")
+      }
     } finally {
       setLoading(false)
     }

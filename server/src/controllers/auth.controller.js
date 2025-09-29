@@ -2,13 +2,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
-import express from "express"
 import bcrypt from "bcrypt"
-import { app } from "../app.js";
-import path from "path";
 
 const register = asyncHandler(async (req, res) => {
-    const { email, username, password, fullName } = req.body;
+    const { email, username, password, fullName } = req.body
     console.log('Request Body Received: ', req.body)
 
     if (!email || !username || !password || !fullName) {
@@ -82,7 +79,7 @@ const login = asyncHandler(async (req, res) => {
     let userObj = user.toObject();
     delete userObj.password
     delete userObj.refreshToken
-
+    
     const accessToken = await user.generateAccessToken()
     res.status(200).json({
         message: "Login success",

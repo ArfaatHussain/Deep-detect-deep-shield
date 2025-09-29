@@ -16,4 +16,6 @@ import { authRouter } from "./routes/auth.route.js"
 
 app.use("/auth",authRouter)
 
+
+
 export {app}

@@ -25,7 +25,7 @@ export const login = async (email, password) => {
     const response = await axios.post(`${API_URL}/auth/login`, requestBody)
     return response
   } catch (error) {
-    console.error("Getting error during login, ", error)
+    console.log("Getting error during login, ", error)
     throw error
   }
 }
