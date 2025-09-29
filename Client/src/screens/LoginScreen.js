@@ -18,6 +18,8 @@ const LoginScreen = ({ navigation }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
+
 
   const showToast = (message) => {
     Toast.show(message, Toast.SHORT);
@@ -49,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
       if (error.response.status == 401) {
         Toast.show("Invalid email or password")
       }
-      if(error.response.status == 404){
+      if (error.response.status == 404) {
         Toast.show("User does exist")
       }
     } finally {
@@ -62,11 +64,11 @@ const LoginScreen = ({ navigation }) => {
       <Text style={styles.title}>Welcome Back</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, focusedInput === 'identifier' && styles.inputContainerFocused,]}>
         <Icon
           name="person-outline"
           size={20}
-          color="#64748B"
+          color={focusedInput === 'identifier' ? '#2563EB' : '#64748B'}
           style={styles.icon}
         />
         <TextInput
@@ -77,15 +79,17 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={(text) =>
             setCredentials({ ...credentials, identifier: text })
           }
+          onFocus={() => setFocusedInput('identifier')}
+          onBlur={() => setFocusedInput(null)}
           autoCapitalize="none"
         />
       </View>
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, focusedInput === 'password' && styles.inputContainerFocused,]}>
         <Icon
           name="lock-closed-outline"
           size={20}
-          color="#64748B"
+          color={focusedInput === 'password' ? '#2563EB' : '#64748B'}
           style={styles.icon}
         />
         <TextInput
@@ -97,12 +101,14 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={(text) =>
             setCredentials({ ...credentials, password: text })
           }
+          onFocus={() => setFocusedInput('password')}
+          onBlur={() => setFocusedInput(null)}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
           <Icon
             name={showPassword ? 'eye-off-outline' : 'eye-outline'}
             size={20}
-            color="#64748B"
+            color={showPassword  ? '#2563EB' : '#64748B'}
           />
         </TouchableOpacity>
       </View>
@@ -164,6 +170,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  inputContainerFocused: {
+    borderColor: '#2563EB', // blue border when focused
+  },
+
   icon: {
     marginRight: 12,
   },

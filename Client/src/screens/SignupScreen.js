@@ -25,6 +25,8 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
+
 
   const showToast = (message) => {
     Toast.show(message, Toast.SHORT);
@@ -68,7 +70,7 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
 
   const handleSignup = async () => {
     const { name, username, email, password, confirmPassword, profileImage } = formData;
-    
+
     // Check empty fields
     if (!name || !username || !email || !password) {
       showToast('Please fill all fields');
@@ -126,7 +128,7 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
         });
       }
       const response = await register(form)
-      console.warn("Response: ",response.data)
+      console.warn("Response: ", response.data)
       Toast.show("User created successfully")
 
       navigation.navigate("Login")
@@ -189,11 +191,14 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
           </View>
 
           {/* Inputs */}
-          <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputContainer,
+            focusedInput === 'name' && styles.inputContainerFocused
+          ]}>
             <Icon
               name="person-outline"
               size={20}
-              color="#64748B"
+              color={focusedInput === 'name' ? '#2563EB' : '#64748B'}
               style={styles.icon}
             />
             <TextInput
@@ -202,25 +207,35 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
               placeholderTextColor="#94A3B8"
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
+              onFocus={() => setFocusedInput('name')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Icon name="at-outline" size={20} color="#64748B" style={styles.icon} />
+          <View style={[
+            styles.inputContainer,
+            focusedInput === 'username' && styles.inputContainerFocused
+          ]}>
+            <Icon name="at-outline" size={20} color={focusedInput === 'username' ? '#2563EB' : '#64748B'} style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Username"
               placeholderTextColor="#94A3B8"
               value={formData.username}
               onChangeText={(text) => setFormData({ ...formData, username: text })}
+              onFocus={() => setFocusedInput('username')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputContainer,
+            focusedInput === 'email' && styles.inputContainerFocused
+          ]}>
             <Icon
               name="mail-outline"
               size={20}
-              color="#64748B"
+              color={focusedInput === 'email' ? '#2563EB' : '#64748B'}
               style={styles.icon}
             />
             <TextInput
@@ -231,14 +246,19 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
               autoCapitalize="none"
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
+              onFocus={() => setFocusedInput('email')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputContainer,
+            focusedInput === 'password' && styles.inputContainerFocused
+          ]}>
             <Icon
               name="lock-closed-outline"
               size={20}
-              color="#64748B"
+              color={focusedInput === 'password' ? '#2563EB' : '#64748B'}
               style={styles.icon}
             />
             <TextInput
@@ -248,21 +268,26 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
               secureTextEntry={!showPassword}
               value={formData.password}
               onChangeText={(text) => setFormData({ ...formData, password: text })}
+              onFocus={() => setFocusedInput('password')}
+              onBlur={() => setFocusedInput(null)}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <Icon
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#64748B"
+                color={showPassword ? '#2563EB' : '#9CA3AF'}
               />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputContainer,
+            focusedInput === 'confirmPassword' && styles.inputContainerFocused
+          ]}>
             <Icon
               name="lock-closed-outline"
               size={20}
-              color="#64748B"
+              color={focusedInput === 'confirmPassword' ? '#2563EB' : '#64748B'}
               style={styles.icon}
             />
             <TextInput
@@ -274,13 +299,15 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
               onChangeText={(text) =>
                 setFormData({ ...formData, confirmPassword: text })
               }
+              onFocus={() => setFocusedInput('confirmPassword')}
+              onBlur={() => setFocusedInput(null)}
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
               <Icon
                 name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#64748B"
+                color={showConfirmPassword ? '#2563EB' : '#9CA3AF'}
               />
             </TouchableOpacity>
           </View>
@@ -382,6 +409,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 56,
     backgroundColor: '#1E293B',
+  },
+  inputContainerFocused: {
+    borderColor: '#2563EB',
+  },
+  eyeIcon: {
+    marginLeft: 8,
   },
   icon: {
     marginRight: 12,

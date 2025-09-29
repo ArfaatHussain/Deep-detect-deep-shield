@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   content: { flex: 1, padding: 20 },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 24,
     letterSpacing: 0.5,

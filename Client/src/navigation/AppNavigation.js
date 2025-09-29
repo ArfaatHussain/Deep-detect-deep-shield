@@ -1,21 +1,52 @@
-import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/native"
-import { createStackNavigator } from "@react-navigation/stack"
-import Dashboard from "../screens/Dashboard"
-import ImageDetection from "../screens/ImageDetection"
-import LoginScreen from "../screens/LoginScreen"
-import SettingsScreen from "../screens/SettingsScreen"
-import SignupScreen from "../screens/SignupScreen"
-import SplashScreen from "../screens/SplashScreen"
-import TamperProof from "../screens/TamperProof"
-import VideoDetection from "../screens/VideoDetection"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import { useEffect, useState } from "react"
+import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import Dashboard from "../screens/Dashboard";
+import ImageDetection from "../screens/ImageDetection";
+import LoginScreen from "../screens/LoginScreen";
+import SettingsScreen from "../screens/SettingsScreen";
+import SignupScreen from "../screens/SignupScreen";
+import SplashScreen from "../screens/SplashScreen";
+import TamperProof from "../screens/TamperProof";
+import VideoDetection from "../screens/VideoDetection";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
-const Stack = createStackNavigator()
+const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
+
+const DashboardTabs = () => {
+    return (
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarStyle: {
+                    height: 70,            
+                    paddingBottom: 10,     
+                    paddingTop: 5,         
+                },
+                tabBarIcon: ({ color, size }) => {
+                    let iconName;
+                    if (route.name === "Dashboard") {
+                        iconName = "home-outline";
+                    } else if (route.name === "Settings") {
+                        iconName = "settings-outline";
+                    }
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+            })}
+        >
+            <Tab.Screen name="Dashboard" component={Dashboard} />
+            <Tab.Screen name="Settings" component={SettingsScreen} />
+        </Tab.Navigator>
+    );
+};
 
 const AppNavigation = ({ darkTheme }) => {
-    const [user, setUser] = useState()
-    const [loading, setLoading] = useState(true)
+    const [user, setUser] = useState();
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
         const checkUser = async () => {
             try {
@@ -33,31 +64,30 @@ const AppNavigation = ({ darkTheme }) => {
         };
 
         checkUser();
-    }, [])
+    }, []);
 
     if (loading) {
-        return <SplashScreen />
+        return <SplashScreen />;
     }
 
     return (
-        <NavigationContainer theme={darkTheme ? DarkTheme : DefaultTheme} >
+        <NavigationContainer theme={darkTheme ? DarkTheme : DefaultTheme}>
             <Stack.Navigator
                 screenOptions={{
-                    headerShown: false
+                    headerShown: false,
                 }}
                 initialRouteName={user && Object.keys(user).length > 0 ? "Dashboard" : "Login"}
             >
                 <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Dashboard" component={Dashboard} />
+                <Stack.Screen name="Dashboard" component={DashboardTabs} />
                 <Stack.Screen name="ImageDetection" component={ImageDetection} />
-                <Stack.Screen name="Settings" component={SettingsScreen} />
                 <Stack.Screen name="Splash" component={SplashScreen} />
                 <Stack.Screen name="TamperProof" component={TamperProof} />
                 <Stack.Screen name="VideoDetection" component={VideoDetection} />
             </Stack.Navigator>
         </NavigationContainer>
-    )
-}
+    );
+};
 
-export default AppNavigation
+export default AppNavigation;
