@@ -5,12 +5,13 @@ import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
 import express from "express"
 import bcrypt from "bcrypt"
 import { app } from "../app.js";
-
+import path from "path";
 
 const register = asyncHandler(async (req, res) => {
-    const { email, username, password, avatar } = req.body;
+    const { email, username, password, fullName } = req.body;
+    console.log('Request Body Received: ', req.body)
 
-    if (!email || !username || !password) {
+    if (!email || !username || !password || !fullName) {
         throw new ApiError(400, "Provide all fields")
     }
 
@@ -33,16 +34,19 @@ const register = asyncHandler(async (req, res) => {
     let fieldsToAdd = {
         email,
         username,
-        password
+        password,
+        fullName
     }
-    if (avatar) {
+    if (req.file) {
         const response = await uploadFileOnCloudinary(req.file.path);
+        console.log("Response URL from cloudinary: ", response.url)
         fieldsToAdd.avatar = response.url;
     }
 
     fieldsToAdd.password = await bcrypt.hash(password, 10);
 
     const newUser = await User.create(fieldsToAdd)
+    console.log("New User: ",newUser)
     const refreshToken = await newUser.generateRefreshToken()
     newUser.refreshToken = refreshToken
     await newUser.save()
@@ -53,34 +57,26 @@ const register = asyncHandler(async (req, res) => {
 
 })
 
-const login = asyncHandler( async(req,res)=>{
-    const {email, username, password} = req.body;
+const login = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-    if((!email && !username) || !password){
-        throw new ApiError(400,"Provide email or username and password")
+    if (!email || !password) {
+        throw new ApiError(400, "Provide email and password")
     }
 
-    let fieldsToCheck = []
-
-    if(email){
-        fieldsToCheck.push({email})
-    }
-    if(username){
-        fieldsToCheck.push({username})
-    }
 
     const user = await User.findOne({
-        $or: fieldsToCheck
+        email
     })
 
-    if(!user){
+    if (!user) {
         throw new ApiError(404, "User does not exist")
     }
 
     // Now checking password
-    const isPasswordCorrect = await bcrypt.compare(password,user.password)
-    if(!isPasswordCorrect){
-        throw new ApiError(401,"Invalid credentials")
+    const isPasswordCorrect = await bcrypt.compare(password, user.password)
+    if (!isPasswordCorrect) {
+        throw new ApiError(401, "Invalid credentials")
     }
 
     let userObj = user.toObject();
@@ -95,6 +91,12 @@ const login = asyncHandler( async(req,res)=>{
             accessToken: accessToken
         }
     })
-} )
+})
 
-export {register, login}
+const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.find()
+    res.status(200).json({
+        users
+    })
+})
+export { register, login, getAllUsers }

@@ -6,6 +6,10 @@ const userSchema = mongoose.Schema({
         unique: true,
         required: true,
     },
+    fullName: {
+        type: String,
+        required: true,
+    },
     username: {
         type: String,
         unique: true,
@@ -13,7 +17,7 @@ const userSchema = mongoose.Schema({
         index: true
     },
     password: {
-        type: String,    
+        type: String,
         required: true,
     },
     avatar: String,
@@ -22,16 +26,16 @@ const userSchema = mongoose.Schema({
     timestamps: true
 })
 
-userSchema.methods.generateRefreshToken = async function(){
+userSchema.methods.generateRefreshToken = async function () {
     try {
         return jwt.sign({
-            _id: this._id,   
+            _id: this._id,
         },
-        process.env.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
-        }
-    )
+            process.env.REFRESH_TOKEN_SECRET,
+            {
+                expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+            }
+        )
     } catch (error) {
         console.error("Error generating refresh token")
     }
@@ -43,11 +47,11 @@ userSchema.methods.generateAccessToken = async function () {
             _id: this._id,
             username: this.username
         },
-    process.env.ACCESS_TOKEN_SECRET,
-    {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRY
-    }
-)
+            process.env.ACCESS_TOKEN_SECRET,
+            {
+                expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+            }
+        )
     } catch (error) {
         console.error("Error generating access token")
     }

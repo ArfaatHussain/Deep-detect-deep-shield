@@ -7,13 +7,13 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
-import AuthService from '../service/AuthService';
-import Toast from 'react-native-simple-toast';
-
-const SignupScreen = ({ navigation }) => {
+import { register } from '../service/AuthService';
+import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -67,8 +67,8 @@ const SignupScreen = ({ navigation }) => {
   };
 
   const handleSignup = async () => {
-    const { name, username, email, password, confirmPassword } = formData;
-
+    const { name, username, email, password, confirmPassword, profileImage } = formData;
+    
     // Check empty fields
     if (!name || !username || !email || !password) {
       showToast('Please fill all fields');
@@ -97,10 +97,7 @@ const SignupScreen = ({ navigation }) => {
       showToast('Password must contain at least one digit');
       return;
     }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      showToast('Password must contain at least one special character');
-      return;
-    }
+
     if (/\s/.test(password)) {
       showToast('Password cannot contain spaces');
       return;
@@ -111,168 +108,202 @@ const SignupScreen = ({ navigation }) => {
       showToast('Passwords do not match');
       return;
     }
+    try {
 
-    // If all validations pass → call API
-    setLoading(true);
-    const result = await AuthService.signUp(formData);
-    setLoading(false);
+      // If all validations pass → call API
+      setLoading(true);
+      const form = new FormData();
+      form.append("fullName", name);
+      form.append("username", username);
+      form.append("email", email);
+      form.append("password", password);
 
-    if (result.success) {
-      showToast('Account created successfully!');
-      setTimeout(() => {
-        navigation.replace('Login');
-      }, 500);
-    } else {
-      showToast('Signup Failed', result.error || 'Something went wrong');
+      if (profileImage) {
+        form.append("avatar", {
+          uri: profileImage.uri,
+          type: profileImage.type || "image/jpeg",
+          name: "avatar.jpg",
+        });
+      }
+      const response = await register(form)
+      console.warn("Response: ",response.data)
+      Toast.show("User created successfully")
+
+      navigation.navigate("Login")
+
+    } catch (error) {
+      if (error.response.status == 409) {
+        Toast.show("User already exists with this email or username")
+      }
+      console.error("Error: ", error)
+    } finally {
+      setLoading(false)
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Create Account</Text>
 
-      {/* Profile Image Section */}
-      <View style={styles.profileImageSection}>
-        <TouchableOpacity
-          style={styles.profileImageContainer}
-          onPress={selectProfileImage}>
-          {formData.profileImage ? (
-            <View style={styles.imageWrapper}>
-              <Image
-                source={{ uri: formData.profileImage.uri }}
-                style={styles.profileImage}
-                resizeMode="cover"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ flex: 1, padding: 20 }} >
+
+
+          <Text style={styles.title}>Create Account</Text>
+
+          {/* Profile Image Section */}
+          <View style={styles.profileImageSection}>
+            <TouchableOpacity
+              style={styles.profileImageContainer}
+              onPress={selectProfileImage}>
+              {formData.profileImage ? (
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: formData.profileImage.uri }}
+                    style={styles.profileImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={removeProfileImage}>
+                    <Icon name="close-circle" size={24} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.placeholderImage}>
+                  <Icon name="camera-outline" size={40} color="#64748B" />
+                  <Text style={styles.placeholderText}>Add Photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.profileImageHint}>
+              Tap to add a profile photo (optional)
+            </Text>
+          </View>
+
+          {/* Inputs */}
+          <View style={styles.inputContainer}>
+            <Icon
+              name="person-outline"
+              size={20}
+              color="#64748B"
+              style={styles.icon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              placeholderTextColor="#94A3B8"
+              value={formData.name}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Icon name="at-outline" size={20} color="#64748B" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              placeholderTextColor="#94A3B8"
+              value={formData.username}
+              onChangeText={(text) => setFormData({ ...formData, username: text })}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Icon
+              name="mail-outline"
+              size={20}
+              color="#64748B"
+              style={styles.icon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#94A3B8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Icon
+              name="lock-closed-outline"
+              size={20}
+              color="#64748B"
+              style={styles.icon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry={!showPassword}
+              value={formData.password}
+              onChangeText={(text) => setFormData({ ...formData, password: text })}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Icon
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#64748B"
               />
-              <TouchableOpacity
-                style={styles.removeImageButton}
-                onPress={removeProfileImage}>
-                <Icon name="close-circle" size={24} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Icon name="camera-outline" size={40} color="#64748B" />
-              <Text style={styles.placeholderText}>Add Profile Photo</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.profileImageHint}>
-          Tap to add a profile photo (optional)
-        </Text>
-      </View>
+            </TouchableOpacity>
+          </View>
 
-      {/* Inputs */}
-      <View style={styles.inputContainer}>
-        <Icon
-          name="person-outline"
-          size={20}
-          color="#64748B"
-          style={styles.icon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor="#94A3B8"
-          value={formData.name}
-          onChangeText={(text) => setFormData({ ...formData, name: text })}
-        />
-      </View>
+          <View style={styles.inputContainer}>
+            <Icon
+              name="lock-closed-outline"
+              size={20}
+              color="#64748B"
+              style={styles.icon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry={!showConfirmPassword}
+              value={formData.confirmPassword}
+              onChangeText={(text) =>
+                setFormData({ ...formData, confirmPassword: text })
+              }
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <Icon
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#64748B"
+              />
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.inputContainer}>
-        <Icon name="at-outline" size={20} color="#64748B" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#94A3B8"
-          value={formData.username}
-          onChangeText={(text) => setFormData({ ...formData, username: text })}
-        />
-      </View>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSignup}
+            disabled={loading}>
+            <Text style={styles.buttonText}>
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </Text>
+          </TouchableOpacity>
 
-      <View style={styles.inputContainer}>
-        <Icon
-          name="mail-outline"
-          size={20}
-          color="#64748B"
-          style={styles.icon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#94A3B8"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={formData.email}
-          onChangeText={(text) => setFormData({ ...formData, email: text })}
-        />
-      </View>
+          <TouchableOpacity onPress={() => navigation.replace('Login')}>
+            <Text style={styles.loginText}>
+              Already have an account? <Text style={styles.loginLink}>Login</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.inputContainer}>
-        <Icon
-          name="lock-closed-outline"
-          size={20}
-          color="#64748B"
-          style={styles.icon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#94A3B8"
-          secureTextEntry={!showPassword}
-          value={formData.password}
-          onChangeText={(text) => setFormData({ ...formData, password: text })}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Icon
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color="#64748B"
-          />
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
 
-      <View style={styles.inputContainer}>
-        <Icon
-          name="lock-closed-outline"
-          size={20}
-          color="#64748B"
-          style={styles.icon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          placeholderTextColor="#94A3B8"
-          secureTextEntry={!showConfirmPassword}
-          value={formData.confirmPassword}
-          onChangeText={(text) =>
-            setFormData({ ...formData, confirmPassword: text })
-          }
-        />
-        <TouchableOpacity
-          onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-          <Icon
-            name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color="#64748B"
-          />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSignup}
-        disabled={loading}>
-        <Text style={styles.buttonText}>
-          {loading ? 'Creating Account...' : 'Sign Up'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.replace('Login')}>
-        <Text style={styles.loginText}>
-          Already have an account? <Text style={styles.loginLink}>Login</Text>
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
   );
 };
 
@@ -299,14 +330,15 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     marginBottom: 10,
+    padding: 10
   },
   imageWrapper: {
     position: 'relative',
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 150,
+    height: 150,
+    borderRadius: 100,
     borderWidth: 3,
     borderColor: '#334155',
   },

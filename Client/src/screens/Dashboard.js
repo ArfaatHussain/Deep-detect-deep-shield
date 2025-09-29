@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import AuthService from '../service/AuthService';
 import CustomModal from '../../components/CustomModal';
 import { ThemeContext } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Dashboard = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -22,12 +23,17 @@ const Dashboard = ({ navigation }) => {
   }, []);
 
   const loadUser = async () => {
-    const currentUser = await AuthService.getCurrentUser();
-    setUser(currentUser);
+    const storedUser = await AsyncStorage.getItem("user")
+    if (storedUser) {
+      const currentUser = JSON.parse(storedUser)
+      console.log("Current User: ", currentUser)
+      setUser(currentUser);
+    }
   };
 
   const handleLogout = async () => {
-    await AuthService.logout();
+    await AsyncStorage.removeItem("user")
+    await AsyncStorage.removeItem("accessToken")
     setLogoutModalVisible(false);
     navigation.replace('Login');
   };
@@ -75,9 +81,9 @@ const Dashboard = ({ navigation }) => {
           },
         ]}>
         <View style={styles.userInfo}>
-          {user?.profileImage?.uri ? (
+          {user?.avatar ? (
             <Image
-              source={{ uri: user.profileImage.uri }}
+              source={{ uri: user.avatar }}
               style={styles.avatarImage}
             />
           ) : (
@@ -92,17 +98,18 @@ const Dashboard = ({ navigation }) => {
           <View style={{ marginLeft: 12 }}>
             <Text
               style={[
-                styles.welcome,
-                { color: darkTheme ? '#94A3B8' : '#475569' },
-              ]}>
-              Welcome back
-            </Text>
-            <Text
-              style={[
                 styles.userName,
                 { color: darkTheme ? '#F1F5F9' : '#1E293B' },
               ]}>
-              {user?.name || 'User'}
+              {user?.fullName || 'User'}
+            </Text>
+
+            <Text
+              style={[
+                styles.welcome,
+                { color: darkTheme ? '#94A3B8' : '#475569', fontSize:12 },
+              ]}>
+              {user?.email}
             </Text>
           </View>
         </View>
@@ -116,7 +123,7 @@ const Dashboard = ({ navigation }) => {
           <Icon
             name="log-out-outline"
             size={26}
-            color={darkTheme ? '#DC2626' : '#B91C1C' }
+            color={darkTheme ? '#DC2626' : '#B91C1C'}
           />
         </TouchableOpacity>
       </View>

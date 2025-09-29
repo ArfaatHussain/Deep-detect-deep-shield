@@ -7,8 +7,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AuthService from '../service/AuthService';
+import { login } from '../service/AuthService';
 import Toast from 'react-native-simple-toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [credentials, setCredentials] = useState({
@@ -22,27 +23,35 @@ const LoginScreen = ({ navigation }) => {
     Toast.show(message, Toast.SHORT);
   };
 
-  
+
   const handleLogin = async () => {
     if (!credentials.identifier || !credentials.password) {
       showToast('Please enter both username/email and password');
       return;
     }
 
-    setLoading(true);
-    const result = await AuthService.login(
-      credentials.identifier,
-      credentials.password
-    );
-    setLoading(false);
+    try {
+      setLoading(true)
 
-    if (result.success) {
-      showToast('Login successful!');
-      setTimeout(() => {
-        navigation.replace('MainTabs');
-      }, 500);
-    } else {
-      showToast(result.error || 'Login failed. Please try again.');
+      const response = await login(credentials.identifier, credentials.password)
+
+      const user = response.data.data.user
+      const accessToken = response.data.data.accessToken
+      console.log("User: ", user)
+      await AsyncStorage.setItem("user", JSON.stringify(user))
+      await AsyncStorage.setItem("accessToken", accessToken)
+      Toast.show("Login successfully")
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Dashboard" }],
+      });
+    } catch (error) {
+      if (error.response.status == 401) {
+        Toast.show("Invalid email or password")
+      }
+      console.error("Error: ", error)
+    } finally {
+      setLoading(false)
     }
   };
 
