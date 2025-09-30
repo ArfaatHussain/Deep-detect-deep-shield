@@ -73,7 +73,7 @@ const login = asyncHandler(async (req, res) => {
     // Now checking password
     const isPasswordCorrect = await bcrypt.compare(password, user.password)
     if (!isPasswordCorrect) {
-        throw new ApiError(401, "Invalid credentials")
+        throw new ApiError(401, "Invalid email or password")
     }
 
     let userObj = user.toObject();
@@ -90,10 +90,4 @@ const login = asyncHandler(async (req, res) => {
     })
 })
 
-const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find()
-    res.status(200).json({
-        users
-    })
-})
-export { register, login, getAllUsers }
+export { register, login }
