@@ -35,9 +35,9 @@ const ImageDetection = ({ navigation }) => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,  
+      quality: 1,            
+      base64: false,          
     });
 
     if (!result.canceled) {
@@ -65,11 +65,12 @@ const ImageDetection = ({ navigation }) => {
       setLoading(false);
       const isFake = Math.random() > 0.5;
       setResult({
-        isFake,
-        confidence: (Math.random() * 30 + 70).toFixed(1),
-        details: isFake
-          ? 'This image shows signs of manipulation'
-          : 'This image appears to be authentic',
+        classification: isFake ? 'Fake' : 'Real',
+        confidence: (Math.random() * 30 + 70).toFixed(1), // 70–100%
+        explanation: isFake
+          ? 'This image shows strong indicators of manipulation such as unnatural facial textures, inconsistent lighting, or digital artifacts.'
+          : 'This image appears authentic based on lighting consistency, metadata, and lack of manipulation artifacts.',
+        highlighted: true,
       });
     }, 3000);
   };
@@ -96,9 +97,10 @@ const ImageDetection = ({ navigation }) => {
 
       <Text
         style={[styles.title, { color: darkTheme ? '#F1F5F9' : '#1E293B' }]}>
-        Image Deepfake Detection
+        Image Detection
       </Text>
 
+      {/* Upload / Input Image */}
       <TouchableOpacity
         style={[
           styles.uploadArea,
@@ -154,29 +156,67 @@ const ImageDetection = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
+      {/* Results */}
       {result && (
-        <View
-          style={[
-            styles.resultContainer,
-            result.isFake ? styles.resultFake : styles.resultReal,
-          ]}>
-          <Icon
-            name={
-              result.isFake ? 'warning-outline' : 'checkmark-circle-outline'
-            }
-            size={40}
-            color={result.isFake ? '#EF4444' : '#10B981'}
-          />
-          <Text style={styles.resultTitle}>
-            {result.isFake ? 'Potential Deepfake Detected' : 'Authentic Image'}
-          </Text>
-          <Text style={styles.resultConfidence}>
-            Confidence: {result.confidence}%
-          </Text>
-          <Text style={styles.resultDetails}>{result.details}</Text>
-        </View>
+        <>
+          <View
+            style={[
+              styles.resultContainer,
+              result.classification === 'Fake'
+                ? styles.resultFake
+                : styles.resultReal,
+            ]}>
+            <Icon
+              name={
+                result.classification === 'Fake'
+                  ? 'warning-outline'
+                  : 'checkmark-circle-outline'
+              }
+              size={40}
+              color={result.classification === 'Fake' ? '#EF4444' : '#10B981'}
+            />
+
+            <Text style={styles.resultTitle}>
+              Classification: {result.classification}
+            </Text>
+            <Text style={styles.resultConfidence}>
+              Confidence Score: {result.confidence}%
+            </Text>
+            <Text style={styles.resultDetails}>{result.explanation}</Text>
+          </View>
+
+          {/* Highlighted Image Container */}
+          {result.highlighted && (
+            <View
+              style={[
+                styles.highlightContainer,
+                {
+                  backgroundColor: darkTheme ? '#1E293B' : '#E2E8F0',
+                  borderColor: darkTheme ? '#334155' : '#CBD5E1',
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.infoTitle,
+                  { color: darkTheme ? '#F1F5F9' : '#1E293B' },
+                ]}>
+                Analyzed Image (Highlighted Regions)
+              </Text>
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={{ uri: selectedImage.uri }}
+                  style={styles.highlightedImage}
+                  resizeMode="contain"
+                />
+                {/* Mock overlay to highlight region */}
+                <View style={styles.highlightBox} />
+              </View>
+            </View>
+          )}
+        </>
       )}
 
+      {/* Info Section */}
       <View
         style={[
           styles.infoContainer,
@@ -209,18 +249,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   backButton: {
     position: 'absolute',
-    top: 25,
+    top: 10,
     left: 10,
     zIndex: 10,
     padding: 10,
     borderRadius: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 32,
-    marginTop: 78,
+    marginTop: 85,
     letterSpacing: 0.5,
   },
   uploadArea: {
@@ -322,6 +362,41 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   infoText: { fontSize: 14, lineHeight: 22, letterSpacing: 0.3 },
+
+  highlightContainer: {
+    padding: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#020617',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  imageWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: 250,
+    marginTop: 12,
+  },
+  highlightedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12
+  },
+  highlightBox: {
+    position: 'absolute',
+    top: '30%',
+    left: '30%',
+    width: '40%',
+    height: '30%',
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    backgroundColor: 'rgba(239,68,68,0.25)',
+    borderRadius: 8,
+  },
 });
 
 export default ImageDetection;

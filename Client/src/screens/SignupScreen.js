@@ -45,7 +45,7 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 1,
     });
 
     if (!result.canceled) {
