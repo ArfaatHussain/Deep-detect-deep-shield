@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
 
@@ -18,6 +19,7 @@ const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const { darkTheme } = useContext(ThemeContext);
 
   const showToast = (message) => {
@@ -35,9 +37,9 @@ const ImageDetection = ({ navigation }) => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,  
-      quality: 1,            
-      base64: false,          
+      allowsEditing: false,
+      quality: 1,
+      base64: false,
     });
 
     if (!result.canceled) {
@@ -60,20 +62,66 @@ const ImageDetection = ({ navigation }) => {
     setLoading(true);
     setResult(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      const isFake = Math.random() > 0.5;
+    try {
+      // Mocked API response for testing
+      const data = {
+        class: "Real Image",
+        confidenceScore: 0.9900120971724391,
+        explanation:
+          "This image is classified as Fake. Attention was on eyes/nose, indicating irregularities in facial structure. Total manipulations regions are eyes/nose.",
+        resultImage:
+          "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      };
+
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       setResult({
-        classification: isFake ? 'Fake' : 'Real',
-        confidence: (Math.random() * 30 + 70).toFixed(1), // 70–100%
-        explanation: isFake
-          ? 'This image shows strong indicators of manipulation such as unnatural facial textures, inconsistent lighting, or digital artifacts.'
-          : 'This image appears authentic based on lighting consistency, metadata, and lack of manipulation artifacts.',
-        highlighted: true,
+        classification: data.class,
+        confidence: (data.confidenceScore * 100).toFixed(1), // convert to %
+        explanation: data.explanation,
+        analyzedImage: data.resultImage,
       });
-    }, 3000);
+    } catch (error) {
+      showToast("Failed to analyze image");
+    } finally {
+      setLoading(false);
+    }
+
   };
+
+  // Function to download analyzed image (only if fake)
+  const downloadImage = async () => {
+    if (!result?.analyzedImage) {
+      showToast("No image available to download");
+      return;
+    }
+
+    setDownloadLoading(true); // Start loading
+
+    try {
+      // Create a filename with timestamp
+      const timestamp = new Date().getTime();
+      const filename = `deepfake-analyzed-${timestamp}.jpg`;
+
+      // Download directly to app's document directory - no permissions needed
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const downloadResult = await FileSystem.downloadAsync(result.analyzedImage, fileUri);
+
+      if (downloadResult.status !== 200) {
+        throw new Error(`Download failed with status: ${downloadResult.status}`);
+      }
+
+      showToast("Image downloaded successfully!");
+
+    } catch (error) {
+      console.error("Download error:", error);
+
+    } finally {
+      setDownloadLoading(false); // Stop loading regardless of success/error
+    }
+  };
+
 
   return (
     <ScrollView
@@ -115,7 +163,7 @@ const ImageDetection = ({ navigation }) => {
             source={{ uri: selectedImage.uri }}
             style={styles.imagePreview}
             resizeMode="contain"
-            onError={() => Alert.alert('Error', 'Failed to load image')}
+            onError={() => showToast('Failed to load image')}
           />
         ) : (
           <>
@@ -162,18 +210,22 @@ const ImageDetection = ({ navigation }) => {
           <View
             style={[
               styles.resultContainer,
-              result.classification === 'Fake'
+              result.classification.toLowerCase().includes("fake")
                 ? styles.resultFake
                 : styles.resultReal,
             ]}>
             <Icon
               name={
-                result.classification === 'Fake'
+                result.classification.toLowerCase().includes("fake")
                   ? 'warning-outline'
                   : 'checkmark-circle-outline'
               }
               size={40}
-              color={result.classification === 'Fake' ? '#EF4444' : '#10B981'}
+              color={
+                result.classification.toLowerCase().includes("fake")
+                  ? '#EF4444'
+                  : '#10B981'
+              }
             />
 
             <Text style={styles.resultTitle}>
@@ -185,8 +237,8 @@ const ImageDetection = ({ navigation }) => {
             <Text style={styles.resultDetails}>{result.explanation}</Text>
           </View>
 
-          {/* Highlighted Image Container */}
-          {result.highlighted && (
+          {/* Analyzed Image from Backend - ONLY show if classification is Fake */}
+          {result.analyzedImage && result.classification.toLowerCase().includes("fake") && (
             <View
               style={[
                 styles.highlightContainer,
@@ -200,17 +252,35 @@ const ImageDetection = ({ navigation }) => {
                   styles.infoTitle,
                   { color: darkTheme ? '#F1F5F9' : '#1E293B' },
                 ]}>
-                Analyzed Image (Highlighted Regions)
+                Analyzed Image
               </Text>
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{ uri: selectedImage.uri }}
+                  source={{ uri: result.analyzedImage }}
                   style={styles.highlightedImage}
                   resizeMode="contain"
                 />
-                {/* Mock overlay to highlight region */}
-                <View style={styles.highlightBox} />
               </View>
+
+              {/* Download button */}
+              <TouchableOpacity
+                style={[
+                  styles.detectButton,
+                  { backgroundColor: "#EF4444", marginTop: 16 },
+                  downloadLoading && styles.buttonDisabled
+                ]}
+                onPress={downloadImage}
+                disabled={downloadLoading}
+              >
+                {downloadLoading ? (
+                  <View style={styles.downloadButtonContent}>
+                    <ActivityIndicator color="#F1F5F9" size="small" />
+                    <Text style={styles.detectButtonText}>Downloading...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.detectButtonText}>Download Analyzed Image</Text>
+                )}
+              </TouchableOpacity>
             </View>
           )}
         </>
@@ -362,7 +432,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   infoText: { fontSize: 14, lineHeight: 22, letterSpacing: 0.3 },
-
   highlightContainer: {
     padding: 20,
     marginBottom: 24,
@@ -384,18 +453,27 @@ const styles = StyleSheet.create({
   highlightedImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12
+    borderRadius: 12,
   },
-  highlightBox: {
-    position: 'absolute',
-    top: '30%',
-    left: '30%',
-    width: '40%',
-    height: '30%',
-    borderWidth: 2,
-    borderColor: '#EF4444',
-    backgroundColor: 'rgba(239,68,68,0.25)',
+  downloadButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    backgroundColor: '#2563EB',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 8,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  downloadText: {
+    color: '#F1F5F9',
+    marginLeft: 8,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
