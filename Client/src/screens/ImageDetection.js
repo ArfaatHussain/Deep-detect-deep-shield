@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  Alert,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
@@ -14,6 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
+import { detectImage } from '../service/imageApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -27,8 +28,7 @@ const ImageDetection = ({ navigation }) => {
   };
 
   const selectImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
       showToast('We need access to your gallery to select an image.');
@@ -63,65 +63,63 @@ const ImageDetection = ({ navigation }) => {
     setResult(null);
 
     try {
-      // Mocked API response for testing
-      const data = {
-        class: "Real Image",
-        confidenceScore: 0.9900120971724391,
-        explanation:
-          "This image is classified as Fake. Attention was on eyes/nose, indicating irregularities in facial structure. Total manipulations regions are eyes/nose.",
-        resultImage:
-          "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      };
+      // Retrieve the logged-in user from AsyncStorage
+      const userString = await AsyncStorage.getItem('user');
+      if (!userString) {
+        showToast('User is not logged in');
+        setLoading(false);
+        return;
+      }
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const user = JSON.parse(userString);
+      const ownerId = user._id; // Make sure this matches the backend expected field
+
+      // Send the image and ownerId to the backend
+      const data = await detectImage(selectedImage, ownerId);
 
       setResult({
-        classification: data.class,
-        confidence: (data.confidenceScore * 100).toFixed(1), // convert to %
-        explanation: data.explanation,
-        analyzedImage: data.resultImage,
+        classification: data.class || 'Unknown',
+        confidence: (data.confidenceScore * 100).toFixed(1),
+        explanation: data.explanation || 'No explanation provided',
+        analyzedImage: data.resultImage || null,
       });
     } catch (error) {
-      showToast("Failed to analyze image");
+      console.error('Analyze error:', error.response?.data || error.message);
+      showToast('Failed to analyze image');
     } finally {
       setLoading(false);
     }
-
   };
 
-  // Function to download analyzed image (only if fake)
   const downloadImage = async () => {
     if (!result?.analyzedImage) {
       showToast("No image available to download");
       return;
     }
 
-    setDownloadLoading(true); // Start loading
+    setDownloadLoading(true);
 
     try {
-      // Create a filename with timestamp
       const timestamp = new Date().getTime();
       const filename = `deepfake-analyzed-${timestamp}.jpg`;
-
-      // Download directly to app's document directory - no permissions needed
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
+
+      // Download image to app storage (no permission required)
       const downloadResult = await FileSystem.downloadAsync(result.analyzedImage, fileUri);
 
-      if (downloadResult.status !== 200) {
-        throw new Error(`Download failed with status: ${downloadResult.status}`);
-      }
+      // Confirm that file exists
+      const fileInfo = await FileSystem.getInfoAsync(downloadResult.uri);
+      if (!fileInfo.exists) throw new Error("Download failed");
 
-      showToast("Image downloaded successfully!");
-
+      showToast("Image saved successfully]!");
+      console.log("File saved at:", downloadResult.uri);
     } catch (error) {
-      console.error("Download error:", error);
-
+      console.error("Download error:", error.message);
+      showToast("Failed to save image");
     } finally {
-      setDownloadLoading(false); // Stop loading regardless of success/error
+      setDownloadLoading(false);
     }
   };
-
 
   return (
     <ScrollView
@@ -129,7 +127,7 @@ const ImageDetection = ({ navigation }) => {
         styles.container,
         { backgroundColor: darkTheme ? '#0F172A' : '#F9FAFB' },
       ]}>
-      {/* Back Icon */}
+      {/* Back Button */}
       <TouchableOpacity
         style={[
           styles.backButton,
@@ -148,7 +146,7 @@ const ImageDetection = ({ navigation }) => {
         Image Detection
       </Text>
 
-      {/* Upload / Input Image */}
+      {/* Upload */}
       <TouchableOpacity
         style={[
           styles.uploadArea,
@@ -227,7 +225,6 @@ const ImageDetection = ({ navigation }) => {
                   : '#10B981'
               }
             />
-
             <Text style={styles.resultTitle}>
               Classification: {result.classification}
             </Text>
@@ -237,7 +234,6 @@ const ImageDetection = ({ navigation }) => {
             <Text style={styles.resultDetails}>{result.explanation}</Text>
           </View>
 
-          {/* Analyzed Image from Backend - ONLY show if classification is Fake */}
           {result.analyzedImage && result.classification.toLowerCase().includes("fake") && (
             <View
               style={[
@@ -262,7 +258,6 @@ const ImageDetection = ({ navigation }) => {
                 />
               </View>
 
-              {/* Download button */}
               <TouchableOpacity
                 style={[
                   styles.detectButton,
@@ -325,156 +320,27 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 32,
-    marginTop: 85,
-    letterSpacing: 0.5,
-  },
-  uploadArea: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderRadius: 16,
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#020617',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  uploadText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    letterSpacing: 0.3,
-  },
-  uploadSubtext: { fontSize: 14, marginTop: 8, letterSpacing: 0.3 },
-  imagePreview: {
-    width: '100%',
-    height: 250,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  detectButton: {
-    backgroundColor: '#2563EB',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
+  title: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 32, marginTop: 85 },
+  uploadArea: { borderWidth: 2, borderStyle: 'dashed', borderRadius: 16, padding: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  uploadText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
+  uploadSubtext: { fontSize: 14, marginTop: 8 },
+  imagePreview: { width: '100%', height: 250, borderRadius: 12, marginBottom: 12 },
+  detectButton: { backgroundColor: '#2563EB', padding: 18, borderRadius: 12, alignItems: 'center', marginBottom: 24 },
   buttonDisabled: { backgroundColor: '#475569' },
-  detectButtonText: {
-    color: '#F1F5F9',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  resultContainer: {
-    padding: 24,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    shadowColor: '#020617',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
+  detectButtonText: { color: '#F1F5F9', fontSize: 16, fontWeight: '700' },
+  resultContainer: { padding: 24, borderRadius: 16, alignItems: 'center', marginBottom: 24, borderWidth: 1 },
   resultReal: { backgroundColor: '#064E3B', borderColor: '#10B981' },
   resultFake: { backgroundColor: '#7F1D1D', borderColor: '#EF4444' },
-  resultTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 12,
-    textAlign: 'center',
-    color: '#F1F5F9',
-    letterSpacing: 0.3,
-  },
-  resultConfidence: {
-    fontSize: 16,
-    marginTop: 8,
-    fontWeight: '600',
-    color: '#F1F5F9',
-  },
-  resultDetails: {
-    fontSize: 14,
-    marginTop: 12,
-    textAlign: 'center',
-    color: '#E2E8F0',
-    lineHeight: 20,
-  },
-  infoContainer: {
-    padding: 20,
-    marginBottom: 60,
-    borderRadius: 16,
-    borderWidth: 1,
-    shadowColor: '#020617',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    letterSpacing: 0.3,
-  },
-  infoText: { fontSize: 14, lineHeight: 22, letterSpacing: 0.3 },
-  highlightContainer: {
-    padding: 20,
-    marginBottom: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    shadowColor: '#020617',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  imageWrapper: {
-    position: 'relative',
-    width: '100%',
-    height: 250,
-    marginTop: 12,
-  },
-  highlightedImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  downloadButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  downloadButton: {
-    flexDirection: 'row',
-    backgroundColor: '#2563EB',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  downloadText: {
-    color: '#F1F5F9',
-    marginLeft: 8,
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  resultTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 12, color: '#F1F5F9' },
+  resultConfidence: { fontSize: 16, marginTop: 8, fontWeight: '600', color: '#F1F5F9' },
+  resultDetails: { fontSize: 14, marginTop: 12, textAlign: 'center', color: '#E2E8F0' },
+  infoContainer: { padding: 20, marginBottom: 60, borderRadius: 16, borderWidth: 1 },
+  infoTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  infoText: { fontSize: 14, lineHeight: 22 },
+  highlightContainer: { padding: 20, marginBottom: 24, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
+  imageWrapper: { width: '100%', height: 250, marginTop: 12 },
+  highlightedImage: { width: '100%', height: '100%', borderRadius: 12 },
+  downloadButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
 });
 
 export default ImageDetection;
