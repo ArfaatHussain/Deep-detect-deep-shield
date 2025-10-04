@@ -1,10 +1,20 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { ThemeContext } from '../context/ThemeContext'; 
+import { ThemeContext } from '../context/ThemeContext';
+import Toast from 'react-native-simple-toast';
 
 const TamperProof = ({ navigation }) => {
-  const { darkTheme } = useContext(ThemeContext); 
+  const { darkTheme } = useContext(ThemeContext);
+
+  const handleUploadPress = () => {
+    Toast.show('Tamper-Proof feature coming soon!', Toast.SHORT);
+  };
 
   return (
     <View
@@ -28,30 +38,74 @@ const TamperProof = ({ navigation }) => {
 
       <Text
         style={[styles.title, { color: darkTheme ? '#F1F5F9' : '#1E293B' }]}>
-        Tamper-Proof
+        Tamper-Proof Media
       </Text>
 
-      <Text style={styles.comingSoon}>Coming Soon</Text>
-
-      <Text
+      {/* Upload Area */}
+      <TouchableOpacity
         style={[
-          styles.description,
-          { color: darkTheme ? '#94A3B8' : '#475569' },
+          styles.uploadArea,
+          {
+            backgroundColor: darkTheme ? '#1E293B' : '#E2E8F0',
+            borderColor: darkTheme ? '#334155' : '#CBD5E1',
+          },
+        ]}
+        onPress={handleUploadPress}>
+        <Icon
+          name="shield-checkmark-outline"
+          size={50}
+          color={darkTheme ? '#64748B' : '#475569'}
+        />
+        <Text
+          style={[
+            styles.uploadText,
+            { color: darkTheme ? '#F1F5F9' : '#1E293B' },
+          ]}>
+          Upload Media
+        </Text>
+        <Text
+          style={[
+            styles.uploadSubtext,
+            { color: darkTheme ? '#94A3B8' : '#475569' },
+          ]}>
+          Make your files tamper-proof
+        </Text>
+      </TouchableOpacity>
+
+
+      {/* Info Section */}
+      <View
+        style={[
+          styles.infoContainer,
+          {
+            backgroundColor: darkTheme ? '#1E293B' : '#E2E8F0',
+            borderColor: darkTheme ? '#334155' : '#CBD5E1',
+          },
         ]}>
-        This module will provide tools to make your media tamper-proof and
-        secure.
-      </Text>
+        <Text
+          style={[
+            styles.infoTitle,
+            { color: darkTheme ? '#F1F5F9' : '#1E293B' },
+          ]}>
+          What this module will do:
+        </Text>
+        <Text
+          style={[
+            styles.infoText,
+            { color: darkTheme ? '#94A3B8' : '#475569' },
+          ]}>
+          • Embed digital watermarks{'\n'}
+          • Add secure metadata{'\n'}
+          • Prevent unauthorized editing{'\n'}
+          • Provide tamper detection
+        </Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
+  container: { flex: 1, padding: 20, alignItems: 'center' },
   backButton: {
     position: 'absolute',
     top: 35,
@@ -63,22 +117,40 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    marginTop: 80,
     marginBottom: 24,
-    letterSpacing: 0.5,
-  },
-  comingSoon: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 24,
-    letterSpacing: 0.5,
-  },
-  description: {
-    fontSize: 16,
     textAlign: 'center',
-    lineHeight: 24,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
+  uploadArea: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#020617',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  uploadText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
+  uploadSubtext: { fontSize: 14, marginTop: 8 },
+  infoContainer: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#020617',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    width: '100%',
+  },
+  infoTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  infoText: { fontSize: 14, lineHeight: 22 },
 });
 
 export default TamperProof;
