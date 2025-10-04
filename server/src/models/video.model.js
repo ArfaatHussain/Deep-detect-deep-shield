@@ -4,7 +4,7 @@ import mongoose, {Schema, model} from "mongoose";
 const resultSchema = Schema({
     explanation: String,
     class: String,
-    resultVideo, String,
+    resultVideo: String,
     confidenceScore: Number
 })
 const videoSchema = Schema({

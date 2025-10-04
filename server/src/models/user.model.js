@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken"
+import { Image } from "./image.model.js";
+import { Video } from "./video.model.js";
 const userSchema = mongoose.Schema({
     email: {
         type: String,
@@ -38,6 +40,7 @@ userSchema.methods.generateRefreshToken = async function () {
         )
     } catch (error) {
         console.error("Error generating refresh token")
+        throw new Error("Error generating refresh token");
     }
 }
 
@@ -54,7 +57,20 @@ userSchema.methods.generateAccessToken = async function () {
         )
     } catch (error) {
         console.error("Error generating access token")
+        throw new Error("Error generating access token");
     }
 }
+
+userSchema.pre("remove",async function (next){
+    await Image.deleteMany({
+        owner: this._id
+    })
+
+    await Video.deleteMany({
+        owner: this._id
+    })
+
+    next()
+})
 
 export const User = mongoose.model("User", userSchema)
