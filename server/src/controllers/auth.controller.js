@@ -35,7 +35,7 @@ const register = asyncHandler(async (req, res) => {
         fullName
     }
     if (req.file) {
-        const response = await uploadFileOnCloudinary(req.file.path);
+        const response = await uploadFileOnCloudinary(req.file.buffer);
         console.log("Response URL from cloudinary: ", response.url)
         fieldsToAdd.avatar = response.url;
     }
