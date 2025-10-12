@@ -15,6 +15,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
 import { detectImage } from '../service/imageApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as MediaLibrary from 'expo-media-library';
 
 const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -91,35 +92,59 @@ const ImageDetection = ({ navigation }) => {
     }
   };
 
-  const downloadImage = async () => {
-    if (!result?.analyzedImage) {
-      showToast("No image available to download");
+const downloadImage = async () => {
+  if (!result?.analyzedImage) {
+    showToast("No image available to download");
+    return;
+  }
+
+  setDownloadLoading(true);
+
+  try {
+    const permission = await MediaLibrary.getPermissionsAsync();
+
+    if (!permission.granted && !permission.canAskAgain) {
+      showToast('Please enable media access manually in Settings.');
+      setDownloadLoading(false);
       return;
     }
 
-    setDownloadLoading(true);
+    if (!permission.granted) {
+      const response = await MediaLibrary.requestPermissionsAsync();
+      if (!response.granted) {
+        showToast('Media access denied.');
+        setDownloadLoading(false);
+        return;
+      }
+    }
+
+    const timestamp = new Date().getTime();
+    const filename = `deepfake-analyzed-${timestamp}.jpg`;
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+   
+    const downloadResult = await FileSystem.downloadAsync(result.analyzedImage, fileUri);
+
+    
+    const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
 
     try {
-      const timestamp = new Date().getTime();
-      const filename = `deepfake-analyzed-${timestamp}.jpg`;
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
-
-      // Download image to app storage (no permission required)
-      const downloadResult = await FileSystem.downloadAsync(result.analyzedImage, fileUri);
-
-      // Confirm that file exists
-      const fileInfo = await FileSystem.getInfoAsync(downloadResult.uri);
-      if (!fileInfo.exists) throw new Error("Download failed");
-
-      showToast("Image saved successfully]!");
-      console.log("File saved at:", downloadResult.uri);
-    } catch (error) {
-      console.error("Download error:", error.message);
-      showToast("Failed to save image");
-    } finally {
-      setDownloadLoading(false);
+      await MediaLibrary.addAssetsToAlbumAsync([asset], null, false);
+    } catch (albumError) {
+      console.log('Album add skipped:', albumError.message);
     }
-  };
+
+    showToast('Image saved to gallery successfully!');
+  } catch (error) {
+    console.error('Download error:', error);
+    if (!error.message?.includes('Already added')) {
+      showToast('Failed to save image');
+    }
+  } finally {
+    setDownloadLoading(false);
+  }
+};
+
 
   return (
     <ScrollView
@@ -269,8 +294,8 @@ const ImageDetection = ({ navigation }) => {
               >
                 {downloadLoading ? (
                   <View style={styles.downloadButtonContent}>
-                    <ActivityIndicator color="#F1F5F9" size="small" />
                     <Text style={styles.detectButtonText}>Downloading...</Text>
+                    <ActivityIndicator color="#F1F5F9" size="small" />
                   </View>
                 ) : (
                   <Text style={styles.detectButtonText}>Download Analyzed Image</Text>
