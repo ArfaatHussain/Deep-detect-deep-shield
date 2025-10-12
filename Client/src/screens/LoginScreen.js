@@ -54,6 +54,7 @@ const LoginScreen = ({ navigation }) => {
       if (error.response.status == 404) {
         Toast.show("User does exist")
       }
+      console.error("Error: ",error)
     } finally {
       setLoading(false)
     }

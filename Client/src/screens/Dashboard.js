@@ -123,7 +123,7 @@ const Dashboard = ({ navigation }) => {
           <Icon
             name="log-out-outline"
             size={26}
-            color={darkTheme ? '#DC2626' : '#B91C1C'}
+            color={darkTheme ? '#F1F5F9' : 'black'}
           />
         </TouchableOpacity>
       </View>

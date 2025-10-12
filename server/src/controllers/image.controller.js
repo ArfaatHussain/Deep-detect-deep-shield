@@ -6,6 +6,7 @@ import { uploadFileOnCloudinary } from '../utils/cloudinary.js';
 import { Image } from '../models/image.model.js';
 import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
+import fs from 'fs';
 const detectImageForDeepfake = asyncHandler(async (req, res) => {
     const {owner} = req.body  
     if(!owner){
@@ -52,6 +53,8 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
         inputImageUrl = inputImage.url
     }
 
+
+
     await Image.create({
         owner,
         imageUrl: inputImageUrl,
@@ -63,7 +66,7 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
         }
     })
 
-
+    fs.unlinkSync(`../python server${predictionResult.highlightedImage}`)
     return res.status(200).json({
         class: predictionResult.class,
         confidenceScore: predictionResult.confidence_score,

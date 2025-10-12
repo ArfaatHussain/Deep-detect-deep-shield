@@ -1,3 +1,25 @@
-server/node_modules
+# Node.js (server)
+server/node_modules/
 server/.env
-server/uploads
+server/uploads/
+
+# Python (server)
+python server/__pycache__/
+python server/env/
+python server/static/
+python server/model/__pycache__/
+python server/model/env/
+python server/model/static/
+
+# OS / Editor junk files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Python cache / temp
+*.pyc
+*.pyo
+*.pyd
+__pycache__/

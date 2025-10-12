@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import timm
+
 class CustomXception(nn.Module):
     def __init__(self, base_model):
         super().__init__()
@@ -17,15 +18,5 @@ class CustomXception(nn.Module):
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
         x = self.dropout(x)
-        x = self.fc2(x)  
+        x = self.fc2(x)
         return x
-
-print("Loading PyTorch model...")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-base_model = timm.create_model('xception', pretrained=True)
-base_model.fc = nn.Identity()  
-model = CustomXception(base_model).to(device)
-
-model.load_state_dict(torch.load("trained_models/deepfake_image_detection_XceptionNet.pth", map_location=device))
-model.eval()
-print("✅ Model loaded successfully")

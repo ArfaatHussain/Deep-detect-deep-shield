@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken"
 import { Image } from "./image.model.js";
 import { Video } from "./video.model.js";
+
 const userSchema = mongoose.Schema({
     email: {
         type: String,

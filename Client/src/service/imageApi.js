@@ -25,7 +25,6 @@ export const detectImage = async (file, owner) => {
         "Content-Type": "multipart/form-data", // Let Axios handle FormData
         Accept: "application/json",
       },
-      timeout: 60000, // 60 seconds
     });
 
     console.log("Server response:", response.data);
