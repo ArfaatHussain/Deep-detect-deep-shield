@@ -34,7 +34,7 @@ export default function History() {
     const getUserHistory = async (userId) => {
         try {
             const response = await getHistory(userId)
-            console.log(response.data.imageHistory);
+            // console.log(response.data.imageHistory);
 
             setImageHistory(response.data.imageHistory)
             setVideoHistory(response.data.videoHistory)

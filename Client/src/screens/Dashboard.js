@@ -39,10 +39,10 @@ const Dashboard = ({ navigation }) => {
   const getUserHistory = async (userId) => {
     try {
       const response = await getHistory(userId)
-      console.log(response.data.imageHistory);
+      // console.log(response.data.imageHistory);
       const imagesCount = response.data.imageHistory.length;
       const videosCount = response.data.videoHistory.length;
-      console.log("Image count: ", imagesCount, "\nVide count: ", videosCount);
+      // console.log("Image count: ", imagesCount, "\nVide count: ", videosCount);
 
       setAnalytics({ imagesCount, videosCount })
     } catch (error) {

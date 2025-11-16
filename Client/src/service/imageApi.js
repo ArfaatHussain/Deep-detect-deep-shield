@@ -1,7 +1,7 @@
 
 import axios from "axios";
-import { API_URL } from "../Constants"; 
-
+// import { API_URL } from "../Constants"; 
+import { API_URL } from "../../config";
 export const detectImage = async (file, owner) => {
   try {
     const url = `${API_URL}/image/detectImage`;

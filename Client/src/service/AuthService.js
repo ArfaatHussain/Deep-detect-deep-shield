@@ -1,5 +1,6 @@
 import axios from "axios"
-import { API_URL } from "../Constants"
+// import { API_URL } from "../Constants"
+import { API_URL } from "../../config"
 export const register = async (formData) => {
   try {
     console.log("Form Data Recieved: ",formData)
