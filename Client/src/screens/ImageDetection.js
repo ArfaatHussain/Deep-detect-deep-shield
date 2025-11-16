@@ -93,58 +93,60 @@ const ImageDetection = ({ navigation }) => {
     }
   };
 
-const downloadImage = async () => {
-  if (!result?.analyzedImage) {
-    showToast("No image available to download");
-    return;
-  }
+  const downloadPhoto = async (photoUrl) => {
+    const fileName = photoUrl.replace(/^.*[\\\/]/, '');
+    let imageFullPathInLocalStorage = FileSystem.documentDirectory + fileName;
 
-  setDownloadLoading(true);
+    return new Promise(async (resolve) => {
+      FileSystem.downloadAsync(photoUrl, imageFullPathInLocalStorage)
+        .then(async ({ uri }) => {
+          await MediaLibrary.saveToLibraryAsync(imageFullPathInLocalStorage);
+          return resolve(imageFullPathInLocalStorage);
+        });
+    });
+  };
 
-  try {
-    const permission = await MediaLibrary.getPermissionsAsync();
 
-    if (!permission.granted && !permission.canAskAgain) {
-      showToast('Please enable media access manually in Settings.');
-      setDownloadLoading(false);
+  const downloadImage = async () => {
+    if (!result?.analyzedImage) {
+      showToast("No image available to download");
       return;
     }
 
-    if (!permission.granted) {
-      const response = await MediaLibrary.requestPermissionsAsync();
-      if (!response.granted) {
-        showToast('Media access denied.');
+    setDownloadLoading(true);
+
+    try {
+      // ---- Permissions Handling ----
+      const permission = await MediaLibrary.getPermissionsAsync();
+
+      if (!permission.granted && !permission.canAskAgain) {
+        showToast("Please enable media access manually in Settings.");
         setDownloadLoading(false);
         return;
       }
+
+      if (!permission.granted) {
+        const response = await MediaLibrary.requestPermissionsAsync();
+        if (!response.granted) {
+          showToast("Media access denied.");
+          setDownloadLoading(false);
+          return;
+        }
+      }
+
+      // ---- Saving Image Using Your Provided Function ----
+      await downloadPhoto(result.analyzedImage);
+
+      showToast("Image saved to gallery successfully!");
+
+    } catch (error) {
+      console.log("Download error:", error);
+      showToast("Failed to save image");
+    } finally {
+      setDownloadLoading(false);
     }
+  };
 
-    const timestamp = new Date().getTime();
-    const filename = `deepfake-analyzed-${timestamp}.jpg`;
-    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-
-   
-    const downloadResult = await FileSystem.downloadAsync(result.analyzedImage, fileUri);
-
-    
-    const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-
-    try {
-      await MediaLibrary.addAssetsToAlbumAsync([asset], null, false);
-    } catch (albumError) {
-      console.log('Album add skipped:', albumError.message);
-    }
-
-    showToast('Image saved to gallery successfully!');
-  } catch (error) {
-    console.error('Download error:', error);
-    if (!error.message?.includes('Already added')) {
-      showToast('Failed to save image');
-    }
-  } finally {
-    setDownloadLoading(false);
-  }
-};
 
 
   return (
