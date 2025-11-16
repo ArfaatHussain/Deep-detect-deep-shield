@@ -8,18 +8,18 @@ import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import fs from 'fs';
 const detectImageForDeepfake = asyncHandler(async (req, res) => {
-    const {owner} = req.body  
-    if(!owner){
-        throw new ApiError(400,"Provide owner id")
+    const { owner } = req.body
+    if (!owner) {
+        throw new ApiError(400, "Provide owner id")
     }
-    if(!mongoose.Types.ObjectId.isValid(owner)){
-        throw new ApiError(400,"ID is not in valid format")
+    if (!mongoose.Types.ObjectId.isValid(owner)) {
+        throw new ApiError(400, "ID is not in valid format")
     }
 
     const user = await User.findById(owner)
-    
-    if(!user){
-        throw new ApiError(404,"User not found")
+
+    if (!user) {
+        throw new ApiError(404, "User not found")
     }
 
     if (!req.file) {
@@ -44,29 +44,33 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
 
     let resultImage;
     let inputImageUrl;
-    if(predictionResult.class == "Fake Image"){
+    if (predictionResult.class == "Fake Image") {
         const path = `../python server${predictionResult.highlightedImage}`
         const response = await uploadFileOnCloudinary(path)
         resultImage = response.url
 
         const inputImage = await uploadFileOnCloudinary(req.file.buffer)
+        // console.log("Input image: ",inputImage)
         inputImageUrl = inputImage.url
     }
-
-
+    else {
+        const inputImage = await uploadFileOnCloudinary(req.file.buffer)
+        // console.log("Input image: ",inputImage)
+        inputImageUrl = inputImage.url
+    }
 
     await Image.create({
         owner,
         imageUrl: inputImageUrl,
         detectionResult: {
-            explanation:  predictionResult.explanation,
+            explanation: predictionResult.explanation,
             class: predictionResult.class,
             resultImage,
             confidenceScore: predictionResult.confidence_score
         }
     })
 
-    fs.unlinkSync(`../python server${predictionResult.highlightedImage}`)
+    // fs.unlinkSync(`../python server${predictionResult.highlightedImage}`)
     return res.status(200).json({
         class: predictionResult.class,
         confidenceScore: predictionResult.confidence_score,

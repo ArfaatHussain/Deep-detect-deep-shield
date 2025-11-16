@@ -23,6 +23,7 @@ const ImageDetection = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const { darkTheme } = useContext(ThemeContext);
+  // const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
   const showToast = (message) => {
     Toast.show(message, Toast.SHORT);

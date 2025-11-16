@@ -14,26 +14,32 @@ const uploadFileOnCloudinary = async (file) => {
         let response;
 
         if (Buffer.isBuffer(file)) {
-            response = await cloudinary.uploader.upload_stream(
-                { resource_type: "auto" },
-                (error, result) => {
-                    if (error) {
-                        console.error("Error uploading to Cloudinary: ", error);
-                        return null;
+
+            response = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { resource_type: "auto" },
+                    (error, result) => {
+                        if (error) {
+                            console.error("Error uploading to Cloudinary:", error);
+                            return reject(error);
+                        }
+                        console.log("File uploaded to Cloudinary successfully. URL:", result.url);
+                        resolve(result);  
                     }
-                    console.log("File uploaded to Cloudinary successfully. URL: ", result.url);
-                    return result;
-                }
-            );
-            response.end(file)
+                );
+
+                stream.end(file);
+            });
+
         } else if (typeof file === 'string') {
             response = await cloudinary.uploader.upload(file, { resource_type: "auto" });
-            console.log("File uploaded to Cloudinary successfully. URL: ", response.url);
+            console.log("File uploaded to Cloudinary successfully. URL:", response.url);
         }
 
-        return response;
+        return response;   
+
     } catch (error) {
-        console.error("Error uploading file to Cloudinary: ", error);
+        console.error("Error uploading file to Cloudinary:", error);
         return null;
     }
 };

@@ -12,11 +12,11 @@ import TamperProof from "../screens/TamperProof";
 import VideoDetection from "../screens/VideoDetection";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-
+import History from "../screens/History";
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const DashboardTabs = () => {
+const BottomTabs = () => {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -30,7 +30,11 @@ const DashboardTabs = () => {
                     let iconName;
                     if (route.name === "Dashboard") {
                         iconName = "home-outline";
-                    } else if (route.name === "Settings") {
+                    } 
+                    else if (route.name === "History"){
+                        iconName = "repeat-outline"
+                    }
+                    else if (route.name === "Settings") {
                         iconName = "settings-outline";
                     }
                     return <Ionicons name={iconName} size={size} color={color} />;
@@ -38,6 +42,7 @@ const DashboardTabs = () => {
             })}
         >
             <Tab.Screen name="Dashboard" component={Dashboard} />
+            <Tab.Screen name="History" component={History} />
             <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
     );
@@ -76,11 +81,11 @@ const AppNavigation = ({ darkTheme }) => {
                 screenOptions={{
                     headerShown: false,
                 }}
-                initialRouteName={user && Object.keys(user).length > 0 ? "Dashboard" : "Login"}
+                initialRouteName={user && Object.keys(user).length > 0 ? "BottomTabs" : "Login"}
             >
                 <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Dashboard" component={DashboardTabs} />
+                <Stack.Screen name="BottomTabs" component={BottomTabs} />
                 <Stack.Screen name="ImageDetection" component={ImageDetection} />
                 <Stack.Screen name="Splash" component={SplashScreen} />
                 <Stack.Screen name="TamperProof" component={TamperProof} />

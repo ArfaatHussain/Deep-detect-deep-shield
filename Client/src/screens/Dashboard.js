@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,24 +12,43 @@ import AuthService from '../service/AuthService';
 import CustomModal from '../../components/CustomModal';
 import { ThemeContext } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { loadUser } from '../utils/loadUser';
+import { useFocusEffect } from '@react-navigation/native';
+import { getHistory } from '../service/userService';
 const Dashboard = ({ navigation }) => {
   const [user, setUser] = useState(null);
+  const [analytics, setAnalytics] = useState({})
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const { darkTheme } = useContext(ThemeContext);
 
   useEffect(() => {
-    loadUser();
-  }, []);
+    (async () => {
+      const currentUser = await loadUser()
+      setUser(currentUser)
+    })()
+  }, [])
 
-  const loadUser = async () => {
-    const storedUser = await AsyncStorage.getItem("user")
-    if (storedUser) {
-      const currentUser = JSON.parse(storedUser)
-      console.log("Current User: ", currentUser)
-      setUser(currentUser);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?._id) {
+        getUserHistory(user._id)
+      }
+    }, [user])
+  )
+
+  const getUserHistory = async (userId) => {
+    try {
+      const response = await getHistory(userId)
+      console.log(response.data.imageHistory);
+      const imagesCount = response.data.imageHistory.length;
+      const videosCount = response.data.videoHistory.length;
+      console.log("Image count: ", imagesCount, "\nVide count: ", videosCount);
+
+      setAnalytics({ imagesCount, videosCount })
+    } catch (error) {
+
     }
-  };
+  }
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("user")
@@ -107,7 +126,7 @@ const Dashboard = ({ navigation }) => {
             <Text
               style={[
                 styles.welcome,
-                { color: darkTheme ? '#94A3B8' : '#475569', fontSize:12 },
+                { color: darkTheme ? '#94A3B8' : '#475569', fontSize: 12 },
               ]}>
               {user?.email}
             </Text>
@@ -199,7 +218,7 @@ const Dashboard = ({ navigation }) => {
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>12</Text>
+              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>{Number(analytics?.imagesCount ?? 0)}</Text>
               <Text
                 style={[
                   styles.statLabel,
@@ -209,36 +228,13 @@ const Dashboard = ({ navigation }) => {
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>97%</Text>
+              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>{Number(analytics?.videosCount ?? 0)}</Text>
               <Text
                 style={[
                   styles.statLabel,
                   { color: darkTheme ? '#94A3B8' : '#475569' },
                 ]}>
-                Image Accuracy
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>5</Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: darkTheme ? '#94A3B8' : '#475569' },
-                ]}>
-                Videos Checked
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: '#60A5FA' }]}>94%</Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: darkTheme ? '#94A3B8' : '#475569' },
-                ]}>
-                Video Accuracy
+                Videos Analyzed
               </Text>
             </View>
           </View>

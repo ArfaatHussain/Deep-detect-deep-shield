@@ -10,6 +10,9 @@ python server/static/
 python server/model/__pycache__/
 python server/model/env/
 python server/model/static/
+# Generated Grad-CAM images
+python server/static/grad_cam_output_*.png
+
 
 # OS / Editor junk files
 .DS_Store
