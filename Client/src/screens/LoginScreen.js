@@ -45,16 +45,18 @@ const LoginScreen = ({ navigation }) => {
       Toast.show("Login successfully")
       navigation.reset({
         index: 0,
-        routes: [{ name: "Dashboard" }],
+        routes: [{ name: "BottomTabs" }],
       });
     } catch (error) {
       if (error.response.status == 401) {
         Toast.show("Invalid email or password")
       }
-      if (error.response.status == 404) {
+      else if (error.response.status == 404) {
         Toast.show("User does exist")
       }
-      console.error("Error: ",error)
+      else{
+        console.error("Error: ",error)
+      }
     } finally {
       setLoading(false)
     }

@@ -79,7 +79,7 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
     }
 
     // Username: no spaces
-    if (/\s/.test(username)) {
+    if (/\s/.test(username.trim())) {
       showToast('Username cannot contain spaces');
       return;
     }
@@ -137,7 +137,9 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
       if (error.response.status == 409) {
         Toast.show("User already exists with this email or username")
       }
-      console.error("Error: ", error)
+      else{
+        console.error("Error: ", error)
+      }
     } finally {
       setLoading(false)
     }

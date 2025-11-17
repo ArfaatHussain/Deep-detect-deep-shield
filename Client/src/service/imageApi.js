@@ -27,17 +27,10 @@ export const detectImage = async (file, owner) => {
       },
     });
 
-    console.log("Server response:", response.data);
+    // console.log("Server response:", response.data);
     return response.data;
 
   } catch (error) {
-    if (error.response) {
-      console.error("Server responded:", error.response.status, error.response.data);
-    } else if (error.request) {
-      console.error("No response received. Request was sent:", error.request);
-    } else {
-      console.error("Error setting up request:", error.message);
-    }
     throw error;
   }
 };

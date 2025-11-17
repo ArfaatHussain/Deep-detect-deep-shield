@@ -26,7 +26,7 @@ const ImageDetection = ({ navigation }) => {
   // const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
   const showToast = (message) => {
-    Toast.show(message, Toast.SHORT);
+    Toast.show(message);
   };
 
   const selectImage = async () => {
@@ -86,8 +86,12 @@ const ImageDetection = ({ navigation }) => {
         analyzedImage: data.resultImage || null,
       });
     } catch (error) {
-      console.error('Analyze error:', error.response?.data || error.message);
-      showToast('Failed to analyze image');
+      if (error.response.status == 400) {
+        showToast("No face detected.")
+      }
+      else {
+        console.error('Analyze error:', error.response?.data || error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -117,21 +121,12 @@ const ImageDetection = ({ navigation }) => {
 
     try {
       // ---- Permissions Handling ----
-      const permission = await MediaLibrary.getPermissionsAsync();
 
-      if (!permission.granted && !permission.canAskAgain) {
-        showToast("Please enable media access manually in Settings.");
+      const response = await MediaLibrary.requestPermissionsAsync();
+      if (!response.granted) {
+        showToast("Media access denied.");
         setDownloadLoading(false);
         return;
-      }
-
-      if (!permission.granted) {
-        const response = await MediaLibrary.requestPermissionsAsync();
-        if (!response.granted) {
-          showToast("Media access denied.");
-          setDownloadLoading(false);
-          return;
-        }
       }
 
       // ---- Saving Image Using Your Provided Function ----
@@ -140,8 +135,8 @@ const ImageDetection = ({ navigation }) => {
       showToast("Image saved to gallery successfully!");
 
     } catch (error) {
-      console.log("Download error:", error);
-      showToast("Failed to save image");
+      console.error("Download error:", error);
+      // showToast("Failed to save image");
     } finally {
       setDownloadLoading(false);
     }
