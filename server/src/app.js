@@ -12,6 +12,8 @@ app.use(express.json())
 
 app.use(cookieParser())
 
+app.use("/uploads", express.static("uploads"))
+
 import { authRouter } from "./routes/auth.route.js"
 import userRouter from "./routes/user.route.js"
 import imageRouter from "./routes/image.route.js"

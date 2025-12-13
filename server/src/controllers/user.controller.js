@@ -12,28 +12,41 @@ const getAllUsers = asyncHandler(async (req, res) => {
     })
 })
 
-const getHistory = asyncHandler(async(req,res)=>{
-    const {userId} = req.params;
-    if(!userId){
-        throw new ApiError(400,"User id is required")
-    }
+const getHistory = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const BASE_URL = process.env.BASE_URL || "http://localhost:"+process.env.PORT;
 
-    if(!mongoose.Types.ObjectId.isValid(userId)){
-        throw new ApiError(400,"User id is not valid")
-    }
+    if (!userId) throw new ApiError(400, "User id is required");
+    if (!mongoose.Types.ObjectId.isValid(userId)) throw new ApiError(400, "User id is not valid");
 
-    const imageDetectionHistory = await  Image.find({owner: userId})
-    const videoDetectionHistory = await Video.find({owner: userId})
+    const imageDetectionHistory = await Image.find({ owner: userId }).lean();
+    const videoDetectionHistory = await Video.find({ owner: userId }).lean();
 
-    if(imageDetectionHistory.length == 0 && videoDetectionHistory.length == 0){
-        throw new ApiError(404,"No history found")
-    }
+    if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0)
+        throw new ApiError(404, "No history found");
+
+    const imagesWithUrl = imageDetectionHistory.map((img) => ({
+        ...img,
+        imageUrl: img.imageUrl ? BASE_URL + "/" + img.imageUrl.replace("\\", "/") : null,
+        detectionResult: img.detectionResult
+            ? {
+                ...img.detectionResult,
+                resultImage: img.detectionResult.resultImage
+                    ? BASE_URL + "/" + img.detectionResult.resultImage.replace("\\", "/")
+                    : null,
+            }
+            : null,
+    }));
+
+    const videosWithUrl = videoDetectionHistory.map((vid) => ({
+        ...vid,
+        videoUrl: vid.videoUrl ? BASE_URL + "/" + vid.videoUrl.replace("\\", "/") : null,
+    }));
 
     res.status(200).json({
-        imageHistory: imageDetectionHistory,
-        videoHistory: videoDetectionHistory
-    })
-    
-})
+        imageHistory: imagesWithUrl,
+        videoHistory: videosWithUrl,
+    });
+});
 
-export {getAllUsers, getHistory}
+export { getAllUsers, getHistory }

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { detectImageForDeepfake } from "../controllers/image.controller.js";
-import { upload } from "../middlewares/multer.middleware.js";
+import  upload  from "../middlewares/multer.middleware.js";
 
 const imageRouter = Router()
 

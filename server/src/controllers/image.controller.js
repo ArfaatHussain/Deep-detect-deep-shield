@@ -7,6 +7,7 @@ import { Image } from '../models/image.model.js';
 import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import fs from 'fs';
+import path from "path";
 const detectImageForDeepfake = async (req, res) => {
     try {
         const { owner } = req.body
@@ -29,11 +30,9 @@ const detectImageForDeepfake = async (req, res) => {
 
         const pythonAPIUrl = 'http://localhost:5001/predict';
 
+
         const formData = new FormData();
-        formData.append('file', req.file.buffer, {
-            filename: 'image.jpg',
-            contentType: req.file.mimetype,
-        });
+        formData.append('file', fs.createReadStream(req.file.path));
 
         const response = await axios.post(pythonAPIUrl, formData, {
             headers: {
@@ -44,25 +43,19 @@ const detectImageForDeepfake = async (req, res) => {
         const predictionResult = response.data;
 
         let resultImage;
-        let inputImageUrl;
         if (predictionResult.class == "Fake Image") {
-            const path = `../python server${predictionResult.highlightedImage}`
-            const response = await uploadFileOnCloudinary(path)
-            resultImage = response.url
+            const pythonImagePath = path.join("..", "python server", predictionResult.highlightedImage);
 
-            const inputImage = await uploadFileOnCloudinary(req.file.buffer)
-            // console.log("Input image: ",inputImage)
-            inputImageUrl = inputImage.url
-        }
-        else {
-            const inputImage = await uploadFileOnCloudinary(req.file.buffer)
-            // console.log("Input image: ",inputImage)
-            inputImageUrl = inputImage.url
-        }
+            const filename = `result-${Date.now()}${path.extname(pythonImagePath)}`;
+            const localPath = path.join("uploads", filename);
 
+            fs.copyFileSync(pythonImagePath, localPath);
+            fs.unlinkSync(pythonImagePath);
+            resultImage = localPath;
+        }
         await Image.create({
             owner,
-            imageUrl: inputImageUrl,
+            imageUrl: req.file.path,
             detectionResult: {
                 explanation: predictionResult.explanation,
                 class: predictionResult.class,
@@ -78,9 +71,10 @@ const detectImageForDeepfake = async (req, res) => {
             resultImage
         })
     } catch (error) {
+        // console.error("Error from python service: ", error)
         // console.log("Error from Python service:", error?.response?.status);
 
-        if(error.response.status == 400 ){
+        if (error.response.status == 400) {
             return res.status(400).json({
                 message: "no face detected. Please insert valid image."
             })
