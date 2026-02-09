@@ -9,6 +9,5 @@ const getLocalIP = () => {
 // Automatically switch between dev and prod
 const isDev = process.env.NODE_ENV !== "production";
 
-export const API_URL = isDev
-  ? DEV_API_URL.replace("127.0.0.1", getLocalIP())
-  : PROD_API_URL;
+console.log("Using API URL: ",DEV_API_URL)
+export const API_URL = DEV_API_URL;
