@@ -2,12 +2,29 @@ import Constants from "expo-constants";
 import { DEV_API_URL, PROD_API_URL } from "@env";
 
 const getLocalIP = () => {
-  const host = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  return host ? host.split(":")[0] : "127.0.0.1";
+  const debuggerHost =
+    Constants.expoConfig?.hostUri ||
+    Constants.manifest?.debuggerHost;
+
+  if (!debuggerHost) {
+    console.warn("⚠️ Could not detect host IP, falling back to localhost");
+    return "127.0.0.1";
+  }
+
+  return debuggerHost.split(":")[0];
 };
 
-// Automatically switch between dev and prod
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = __DEV__;
 
-console.log("Using API URL: ",DEV_API_URL)
-export const API_URL = DEV_API_URL;
+// Deepfake detection server (port 5000)
+export const API_URL = isDev
+  ? `http://${getLocalIP()}:5000`
+  : PROD_API_URL;
+
+// Tamper server (port 5001)
+export const TAMPER_API_URL = isDev
+  ? `http://${getLocalIP()}:5001/tamper`
+  : `${PROD_API_URL}/tamper`;
+
+console.log("🌐 API URL:", API_URL);
+console.log("🌐 Tamper API URL:", TAMPER_API_URL);

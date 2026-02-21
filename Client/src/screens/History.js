@@ -2,53 +2,52 @@ import React, { useCallback, useEffect, useState, useContext } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import toast from "react-native-simple-toast"
 import { getHistory } from "../service/userService";
 import { loadUser } from "../utils/loadUser";
 import { ThemeContext } from '../context/ThemeContext';
+import { getTheme } from '../context/theme';
+
 export default function History() {
     const [activeTab, setActiveTab] = useState("image");
-    const [user, setUser] = useState()
-    const [imageHistory, setImageHistory] = useState([])
-    const [videoHistory, setVideoHistory] = useState([])
+    const [user, setUser] = useState();
+    const [imageHistory, setImageHistory] = useState([]);
+    const [videoHistory, setVideoHistory] = useState([]);
     const { darkTheme } = useContext(ThemeContext);
+
+    const t = getTheme(darkTheme);
+
     const tabs = [
-        { id: "image", label: "Image Detection", icon: "image-outline" },
-        { id: "video", label: "Video Detection", icon: "videocam-outline" },
+        { id: "image", label: "Image", icon: "image-outline" },
+        { id: "video", label: "Video", icon: "videocam-outline" },
+        { id: "tamper", label: "Tamper Proof", icon: "shield-checkmark-outline" },
     ];
 
     useEffect(() => {
         (async () => {
-            const currentUser = await loadUser()
-            setUser(currentUser)
-        })()
-    }, [])
+            const currentUser = await loadUser();
+            setUser(currentUser);
+        })();
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
             if (user?._id) {
-                getUserHistory(user._id)
+                getUserHistory(user._id);
             }
         }, [user])
-    )
+    );
 
     const getUserHistory = async (userId) => {
         try {
-            const response = await getHistory(userId)
-            // console.log(response.data.imageHistory);
-
-            setImageHistory(response.data.imageHistory)
-            setVideoHistory(response.data.videoHistory)
+            const response = await getHistory(userId);
+            setImageHistory(response.data.imageHistory || []);
+            setVideoHistory(response.data.videoHistory || []);
         } catch (error) {
-            if (error.response.status == 404) {
-                // toast.show("No history found.")
-                setImageHistory([])
-                setVideoHistory([])
-            }
-            else {
-                console.error(error);
-            }
+            setImageHistory([]);
+            setVideoHistory([]);
+            console.error(error);
         }
-    }
+    };
 
     const renderItem = ({ item }) => {
         const hasDetectionResult =
@@ -57,108 +56,96 @@ export default function History() {
             item.detectionResult.resultImage;
 
         return (
-            <View style={[styles.historyCard, {
-                backgroundColor: darkTheme ? '#1E293B' : '#FFF',
-                borderColor: darkTheme ? '#334155' : '#E8E8E8'
-            }]}>
+            <View
+                style={[
+                    styles.historyCard,
+                    {
+                        backgroundColor: t.cardBg,
+                        borderColor: t.cardBorder,
+                        shadowOpacity: t.cardShadowOpacity,
+                    },
+                ]}
+            >
                 {hasDetectionResult ? (
-                    <View style={{ flexDirection: 'row' }}>
-                        {/* Original Image */}
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    marginBottom: 10,
-                                    color: darkTheme ? '#CBD5E1' : '#969191',
-                                    fontWeight: '600',
-                                }}
-                            >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <View style={{ flex: 1, marginRight: 8 }}>
+                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
                                 Original Image
                             </Text>
-                            <Image
-                                source={{ uri: item.imageUrl }}
-                                style={{ height: 150, width: 150, resizeMode: 'cover', borderRadius: 12 }}
-                            />
+                            <Image source={{ uri: item.imageUrl }} style={styles.historyImage} />
                         </View>
 
-                        {/* Result Image */}
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    marginBottom: 10,
-                                    color: darkTheme ? '#CBD5E1' : '#969191',
-                                    fontWeight: '600',
-                                }}
-                            >
-                                Detection Image
+                        <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                                Detection Result
                             </Text>
                             <Image
                                 source={{ uri: item.detectionResult.resultImage }}
-                                style={{ height: 150, width: 150, resizeMode: 'cover', borderRadius: 12 }}
+                                style={styles.historyImage}
                             />
                         </View>
                     </View>
                 ) : (
-                    <View>
-                        <Image
-                            source={{ uri: item.imageUrl }}
-                            style={{ height: 300, width: '100%', resizeMode: 'cover', borderRadius: 12 }}
-                        />
-                    </View>
+                    <Image
+                        source={{ uri: item.imageUrl }}
+                        style={[styles.historyImage, { width: '100%' }]}
+                    />
                 )}
 
-                <Text style={{ marginTop: 10, color: darkTheme ? '#CBD5E1' : '#969191' }}>
+                <Text style={[styles.explanationText, { color: t.descriptionText }]}>
                     {item.detectionResult?.explanation || ''}
                 </Text>
             </View>
-        )
+        );
     };
 
-
     return (
-        <View style={[styles.container, { backgroundColor: darkTheme ? '#0F172A' : '#F9FAFB' }]}>
-            {/* Tabs */}
-            <View style={[styles.tabContainer, { backgroundColor: darkTheme ? '#1E293B' : '#EDEDED' }]}>
-                {tabs.map((t) => (
-                    <TouchableOpacity
-                        key={t.id}
-                        style={[
-                            styles.tab,
-                            activeTab === t.id && styles.activeTab,
-                            {
-                                backgroundColor: activeTab === t.id
-                                    ? darkTheme ? '#334155' : '#FFF'
-                                    : darkTheme ? '#1E293B' : '#E2E8F0',
-                                borderColor: darkTheme ? '#334155' : '#CBD5E1',
-                            }
-                        ]}
-                        onPress={() => setActiveTab(t.id)}
-                    >
-                        <Ionicons
-                            name={t.icon}
-                            size={18}
-                            color={activeTab === t.id ? (darkTheme ? '#F1F5F9' : '#000') : '#777'}
-                        />
-                        <Text
+        <View style={[styles.container, { backgroundColor: t.background }]}>
+            <View style={[styles.tabContainer, { backgroundColor: t.tabContainerBg }]}>
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <TouchableOpacity
+                            key={tab.id}
                             style={[
-                                styles.tabText,
-                                activeTab === t.id && styles.activeTabText,
-                                { color: darkTheme ? (activeTab === t.id ? '#F1F5F9' : '#CBD5E1') : (activeTab === t.id ? '#1E293B' : '#777') }
+                                styles.tab,
+                                isActive && styles.activeTab,
+                                {
+                                    backgroundColor: isActive ? t.tabActiveBg : t.tabBg,
+                                    borderColor: t.tabBorder,
+                                    shadowOpacity: isActive ? t.cardShadowOpacity : 0,
+                                },
                             ]}
+                            onPress={() => setActiveTab(tab.id)}
                         >
-                            {t.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                            <Ionicons
+                                name={tab.icon}
+                                size={18}
+                                color={isActive ? t.tabActiveText : t.tabText}
+                            />
+                            <Text
+                                style={[
+                                    styles.tabText,
+                                    isActive && styles.activeTabText,
+                                    { color: isActive ? t.tabActiveText : t.tabText },
+                                ]}
+                            >
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
 
-            {/* Content List */}
             <FlatList
                 data={activeTab === "image" ? imageHistory : videoHistory}
                 renderItem={renderItem}
                 keyExtractor={(item) => item._id}
-                contentContainerStyle={{ paddingVertical: 10 }}
+                contentContainerStyle={{ paddingVertical: 10, paddingHorizontal: 12 }}
                 ListEmptyComponent={() => (
-                    <Text style={{ color: darkTheme ? '#94A3B8' : '#a4a2a2', textAlign: 'center' }}>No history yet.</Text>
+                    <Text style={{ color: t.emptyText, textAlign: 'center', marginTop: 20 }}>
+                        No history yet.
+                    </Text>
                 )}
                 showsVerticalScrollIndicator={false}
             />
@@ -167,72 +154,56 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        // backgroundColor: "#F7F7F7",
-        paddingHorizontal: 20,
-        paddingTop: 15
-    },
-
-    header: {
-        fontSize: 24,
-        fontWeight: "700",
-        marginBottom: 20,
-        color: "#000",
-    },
-
+    container: { flex: 1, paddingTop: 15 },
     tabContainer: {
         flexDirection: "row",
-        backgroundColor: "#EDEDED",
-        padding: 5,
+        padding: 6,
+        paddingHorizontal: 12,
         borderRadius: 12,
-        marginBottom: 20,
+        marginBottom: 16,
+        gap: 7,
     },
-
     tab: {
         flex: 1,
         justifyContent: "center",
-        paddingVertical: 5,
+        paddingVertical: 8,
         borderRadius: 10,
-        alignItems: 'center'
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
+        borderWidth: 1,
     },
-
     activeTab: {
-        backgroundColor: "#FFF",
         shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
         shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
+        elevation: 3,
     },
-
-    tabText: {
-        fontSize: 12,
-        color: "#777",
-    },
-
-    activeTabText: {
-        color: "#000",
-        fontWeight: "600",
-    },
-
+    tabText: { fontSize: 12 },
+    activeTabText: { fontWeight: "600", fontSize: 13 },
     historyCard: {
-        backgroundColor: "#FFF",
         padding: 16,
-        marginBottom: 12,
+        marginBottom: 16,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#E8E8E8",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 8,
+        elevation: 4,
     },
-
-    historyTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#000",
+    historyImage: {
+        height: 150,
+        borderRadius: 12,
+        resizeMode: 'cover',
     },
-
-    historyDate: {
+    imageLabel: {
+        marginBottom: 8,
+        fontWeight: '600',
         fontSize: 13,
-        color: "#777",
-        marginTop: 4,
+    },
+    explanationText: {
+        marginTop: 10,
+        fontSize: 12,
+        lineHeight: 18,
     },
 });

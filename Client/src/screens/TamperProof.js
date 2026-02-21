@@ -7,93 +7,57 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ThemeContext } from '../context/ThemeContext';
-import Toast from 'react-native-simple-toast';
+import { getTheme } from '../context/theme';
 
 const TamperProof = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
-
-  const handleUploadPress = () => {
-    Toast.show('Tamper-Proof feature coming soon!', Toast.SHORT);
-  };
+  const t =getTheme(darkTheme);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: darkTheme ? '#0F172A' : '#F9FAFB' },
-      ]}>
+    <View style={[styles.container, { backgroundColor: t.background }]}>
       {/* Back Icon */}
       <TouchableOpacity
-        style={[
-          styles.backButton,
-          { backgroundColor: darkTheme ? 'rgba(30,41,59,0.8)' : '#E2E8F0' },
-        ]}
-        onPress={() => navigation.navigate('Dashboard')}>
-        <Icon
-          name="arrow-back"
-          size={24}
-          color={darkTheme ? '#F1F5F9' : '#1E293B'}
-        />
+        style={[styles.backButton, { backgroundColor: t.cardBg }]}
+        onPress={() => navigation.navigate('Dashboard')}
+      >
+        <Icon name="arrow-back" size={24} color={t.textPrimary} />
       </TouchableOpacity>
 
-      <Text
-        style={[styles.title, { color: darkTheme ? '#F1F5F9' : '#1E293B' }]}>
+      <Text style={[styles.title, { color: t.textPrimary }]}>
         Tamper-Proof Media
       </Text>
 
-      {/* Upload Area */}
-      <TouchableOpacity
-        style={[
-          styles.uploadArea,
-          {
-            backgroundColor: darkTheme ? '#1E293B' : '#E2E8F0',
-            borderColor: darkTheme ? '#334155' : '#CBD5E1',
-          },
-        ]}
-        onPress={handleUploadPress}>
-        <Icon
-          name="shield-checkmark-outline"
-          size={50}
-          color={darkTheme ? '#64748B' : '#475569'}
-        />
-        <Text
-          style={[
-            styles.uploadText,
-            { color: darkTheme ? '#F1F5F9' : '#1E293B' },
-          ]}>
-          Upload Media
-        </Text>
-        <Text
-          style={[
-            styles.uploadSubtext,
-            { color: darkTheme ? '#94A3B8' : '#475569' },
-          ]}>
-          Make your files tamper-proof
-        </Text>
-      </TouchableOpacity>
+      {/* Options: Protect or Verify */}
+      <View style={styles.optionsContainer}>
+        {/* Protect Image */}
+        <TouchableOpacity
+          style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+          onPress={() => navigation.navigate('ProtectScreen')}
+        >
+          <Icon name="shield-checkmark-outline" size={40} color={t.iconColor} />
+          <Text style={[styles.optionText, { color: t.textPrimary }]}>
+            Protect Image
+          </Text>
+        </TouchableOpacity>
 
+        {/* Verify Image */}
+        <TouchableOpacity
+          style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+          onPress={() => navigation.navigate('VerifyScreen')}
+        >
+          <Icon name="checkmark-done-outline" size={40} color={t.iconColor} />
+          <Text style={[styles.optionText, { color: t.textPrimary }]}>
+            Verify Image
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Info Section */}
-      <View
-        style={[
-          styles.infoContainer,
-          {
-            backgroundColor: darkTheme ? '#1E293B' : '#E2E8F0',
-            borderColor: darkTheme ? '#334155' : '#CBD5E1',
-          },
-        ]}>
-        <Text
-          style={[
-            styles.infoTitle,
-            { color: darkTheme ? '#F1F5F9' : '#1E293B' },
-          ]}>
+      <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
+        <Text style={[styles.infoTitle, { color: t.textPrimary }]}>
           What this module will do:
         </Text>
-        <Text
-          style={[
-            styles.infoText,
-            { color: darkTheme ? '#94A3B8' : '#475569' },
-          ]}>
+        <Text style={[styles.infoText, { color: t.textSecondary }]}>
           • Embed digital watermarks{'\n'}
           • Add secure metadata{'\n'}
           • Prevent unauthorized editing{'\n'}
@@ -104,6 +68,8 @@ const TamperProof = ({ navigation }) => {
   );
 };
 
+
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, alignItems: 'center' },
   backButton: {
@@ -112,7 +78,12 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
     padding: 10,
-    borderRadius: 20,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 28,
@@ -122,27 +93,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
-  uploadArea: {
+  optionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 24,
+  },
+  optionButton: {
+    flex: 1,
     borderWidth: 2,
-    borderStyle: 'dashed',
-    borderRadius: 16,
-    padding: 48,
+    borderStyle: 'solid',
+    borderRadius: 20,
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#020617',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
+    transition: 'all 0.2s',
   },
-  uploadText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
-  uploadSubtext: { fontSize: 14, marginTop: 8 },
+  optionText: { fontSize: 16, fontWeight: '600', marginTop: 12, textAlign: 'center' },
   infoContainer: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    shadowColor: '#020617',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

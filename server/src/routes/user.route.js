@@ -1,8 +1,19 @@
 import { Router } from "express";
-import { getAllUsers, getHistory } from "../controllers/user.controller.js";
+import {
+  getAllUsers,
+  getHistory,
+  clearHistory
+} from "../controllers/user.controller.js";
 
-const userRouter = Router()
+const userRouter = Router();
 
-userRouter.route("/getAllUsers").get(getAllUsers)
-userRouter.route("/getHistory/:userId").get(getHistory)
-export default userRouter
+// get all users
+userRouter.route("/getAllUsers").get(getAllUsers);
+
+// get user history
+userRouter.route("/getHistory/:userId").get(getHistory);
+
+// clear user history ✅ CLEAN URL
+userRouter.delete("/:userId/history", clearHistory);
+
+export default userRouter;

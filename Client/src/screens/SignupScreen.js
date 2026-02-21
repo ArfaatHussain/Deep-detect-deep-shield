@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,14 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { register } from '../service/AuthService';
-import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigation }) => {
+import Toast from 'react-native-simple-toast';
+import { ThemeContext } from '../context/ThemeContext';
+import { getTheme } from '../context/theme';
+
+const SignupScreen = ({ navigation }) => {
+  const { darkTheme } = useContext(ThemeContext); 
+  const t = getTheme(darkTheme); 
+
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -27,15 +34,12 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
 
-
   const showToast = (message) => {
     Toast.show(message, Toast.SHORT);
   };
 
   const selectProfileImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       showToast('We need access to your gallery to select a profile picture.');
       return;
@@ -62,35 +66,24 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
   };
 
   const removeProfileImage = () => {
-    setFormData({
-      ...formData,
-      profileImage: null,
-    });
+    setFormData({ ...formData, profileImage: null });
   };
 
   const handleSignup = async () => {
     const { name, username, email, password, confirmPassword, profileImage } = formData;
 
-    // Check empty fields
     if (!name || !username || !email || !password) {
       showToast('Please fill all fields');
-
       return;
     }
-
-    // Username: no spaces
     if (/\s/.test(username.trim())) {
       showToast('Username cannot contain spaces');
       return;
     }
-
-    // Email validation
-    if (!formData.email.endsWith('@gmail.com')) {
+    if (!email.endsWith('@gmail.com')) {
       showToast('Email must be a Gmail address');
       return;
     }
-
-    // Password validations
     if (password.length <= 5) {
       showToast('Password must be longer than 5 characters');
       return;
@@ -99,359 +92,166 @@ import Toast from 'react-native-simple-toast'; const SignupScreen = ({ navigatio
       showToast('Password must contain at least one digit');
       return;
     }
-
     if (/\s/.test(password)) {
       showToast('Password cannot contain spaces');
       return;
     }
-
-    // Confirm password
     if (password !== confirmPassword) {
       showToast('Passwords do not match');
       return;
     }
-    try {
 
-      // If all validations pass → call API
+    try {
       setLoading(true);
       const form = new FormData();
-      form.append("fullName", name);
-      form.append("username", username);
-      form.append("email", email);
-      form.append("password", password);
+      form.append('fullName', name);
+      form.append('username', username);
+      form.append('email', email);
+      form.append('password', password);
 
       if (profileImage) {
-        form.append("avatar", {
+        form.append('avatar', {
           uri: profileImage.uri,
-          type: profileImage.type || "image/jpeg",
-          name: "avatar.jpg",
+          type: profileImage.type || 'image/jpeg',
+          name: 'avatar.jpg',
         });
       }
-      const response = await register(form)
-      console.warn("Response: ", response.data)
-      Toast.show("User created successfully")
 
-      navigation.navigate("Login")
-
+      const response = await register(form);
+      Toast.show('User created successfully');
+      navigation.navigate('Login');
     } catch (error) {
-      if (error.response.status == 409) {
-        Toast.show("User already exists with this email or username")
-      }
-      else{
-        console.error("Error: ", error)
+      if (error.response?.status === 409) {
+        showToast('User already exists with this email or username');
+      } else {
+        console.error('Error:', error);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
   return (
-
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      style={[styles.container, { backgroundColor: t.background }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ flex: 1, padding: 20 }} >
-
-
-          <Text style={styles.title}>Create Account</Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        <View style={{ flex: 1, padding: 20 }}>
+          <Text style={[styles.title, { color: t.textPrimary }]}>Create Account</Text>
 
           {/* Profile Image Section */}
           <View style={styles.profileImageSection}>
-            <TouchableOpacity
-              style={styles.profileImageContainer}
-              onPress={selectProfileImage}>
+            <TouchableOpacity style={styles.profileImageContainer} onPress={selectProfileImage}>
               {formData.profileImage ? (
                 <View style={styles.imageWrapper}>
                   <Image
                     source={{ uri: formData.profileImage.uri }}
-                    style={styles.profileImage}
-                    resizeMode="cover"
+                    style={[styles.profileImage, { borderColor: t.inputBorder }]}
                   />
                   <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={removeProfileImage}>
+                    style={[styles.removeImageButton, { backgroundColor: t.cardBg }]}
+                    onPress={removeProfileImage}
+                  >
                     <Icon name="close-circle" size={24} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View style={styles.placeholderImage}>
-                  <Icon name="camera-outline" size={40} color="#64748B" />
-                  <Text style={styles.placeholderText}>Add Photo</Text>
+                <View style={[styles.placeholderImage, { borderColor: t.inputBorder, backgroundColor: t.cardBg }]}>
+                  <Icon name="camera-outline" size={40} color={t.iconColor} />
+                  <Text style={[styles.placeholderText, { color: t.textSecondary }]}>Add Photo</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.profileImageHint}>
+            <Text style={[styles.profileImageHint, { color: t.textSecondary }]}>
               Tap to add a profile photo (optional)
             </Text>
           </View>
 
           {/* Inputs */}
-          <View style={[
-            styles.inputContainer,
-            focusedInput === 'name' && styles.inputContainerFocused
-          ]}>
-            <Icon
-              name="person-outline"
-              size={20}
-              color={focusedInput === 'name' ? '#2563EB' : '#64748B'}
-              style={styles.icon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              placeholderTextColor="#94A3B8"
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-              onFocus={() => setFocusedInput('name')}
-              onBlur={() => setFocusedInput(null)}
-            />
-          </View>
-
-          <View style={[
-            styles.inputContainer,
-            focusedInput === 'username' && styles.inputContainerFocused
-          ]}>
-            <Icon name="at-outline" size={20} color={focusedInput === 'username' ? '#2563EB' : '#64748B'} style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Username"
-              placeholderTextColor="#94A3B8"
-              value={formData.username}
-              onChangeText={(text) => setFormData({ ...formData, username: text })}
-              onFocus={() => setFocusedInput('username')}
-              onBlur={() => setFocusedInput(null)}
-            />
-          </View>
-
-          <View style={[
-            styles.inputContainer,
-            focusedInput === 'email' && styles.inputContainerFocused
-          ]}>
-            <Icon
-              name="mail-outline"
-              size={20}
-              color={focusedInput === 'email' ? '#2563EB' : '#64748B'}
-              style={styles.icon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#94A3B8"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              onFocus={() => setFocusedInput('email')}
-              onBlur={() => setFocusedInput(null)}
-            />
-          </View>
-
-          <View style={[
-            styles.inputContainer,
-            focusedInput === 'password' && styles.inputContainerFocused
-          ]}>
-            <Icon
-              name="lock-closed-outline"
-              size={20}
-              color={focusedInput === 'password' ? '#2563EB' : '#64748B'}
-              style={styles.icon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry={!showPassword}
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              onFocus={() => setFocusedInput('password')}
-              onBlur={() => setFocusedInput(null)}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          {[
+            { key: 'name', placeholder: 'Full Name', icon: 'person-outline' },
+            { key: 'username', placeholder: 'Username', icon: 'at-outline' },
+            { key: 'email', placeholder: 'Email', icon: 'mail-outline', keyboardType: 'email-address' },
+            { key: 'password', placeholder: 'Password', icon: 'lock-closed-outline', secure: !showPassword, toggle: () => setShowPassword(!showPassword) },
+            { key: 'confirmPassword', placeholder: 'Confirm Password', icon: 'lock-closed-outline', secure: !showConfirmPassword, toggle: () => setShowConfirmPassword(!showConfirmPassword) },
+          ].map((field) => (
+            <View
+              key={field.key}
+              style={[
+                styles.inputContainer,
+                { backgroundColor: t.inputBg, borderColor: focusedInput === field.key ? t.focusBorder : t.inputBorder },
+              ]}
+            >
               <Icon
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                name={field.icon}
                 size={20}
-                color={showPassword ? '#2563EB' : '#9CA3AF'}
+                color={focusedInput === field.key ? t.focusBorder : t.iconColor}
+                style={styles.icon}
               />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[
-            styles.inputContainer,
-            focusedInput === 'confirmPassword' && styles.inputContainerFocused
-          ]}>
-            <Icon
-              name="lock-closed-outline"
-              size={20}
-              color={focusedInput === 'confirmPassword' ? '#2563EB' : '#64748B'}
-              style={styles.icon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry={!showConfirmPassword}
-              value={formData.confirmPassword}
-              onChangeText={(text) =>
-                setFormData({ ...formData, confirmPassword: text })
-              }
-              onFocus={() => setFocusedInput('confirmPassword')}
-              onBlur={() => setFocusedInput(null)}
-            />
-            <TouchableOpacity
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-              <Icon
-                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={showConfirmPassword ? '#2563EB' : '#9CA3AF'}
+              <TextInput
+                style={[styles.input, { color: t.textPrimary }]}
+                placeholder={field.placeholder}
+                placeholderTextColor={t.placeholder}
+                secureTextEntry={field.secure}
+                value={formData[field.key]}
+                keyboardType={field.keyboardType || 'default'}
+                onChangeText={(text) => setFormData({ ...formData, [field.key]: text })}
+                onFocus={() => setFocusedInput(field.key)}
+                onBlur={() => setFocusedInput(null)}
               />
-            </TouchableOpacity>
-          </View>
+              {field.toggle && (
+                <TouchableOpacity onPress={field.toggle}>
+                  <Icon
+                    name={field.secure ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color={focusedInput === field.key ? t.focusBorder : t.iconColor}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: loading ? t.buttonDisabled : t.button }]}
             onPress={handleSignup}
-            disabled={loading}>
-            <Text style={styles.buttonText}>
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </Text>
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Creating Account...' : 'Sign Up'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.replace('Login')}>
-            <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginLink}>Login</Text>
+            <Text style={[styles.loginText, { color: t.textSecondary }]}>
+              Already have an account? <Text style={[styles.loginLink, { color: t.link }]}>Login</Text>
             </Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
-
   );
 };
 
+
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-  },
-  content: {
-    padding: 20,
-    paddingTop: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#F1F5F9',
-    letterSpacing: 0.5,
-  },
-  profileImageSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  profileImageContainer: {
-    marginBottom: 10,
-    padding: 10
-  },
-  imageWrapper: {
-    position: 'relative',
-  },
-  profileImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 100,
-    borderWidth: 3,
-    borderColor: '#334155',
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 2,
-  },
-  placeholderImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: '#334155',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1E293B',
-  },
-  placeholderText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  profileImageHint: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    marginBottom: 20,
-    paddingHorizontal: 16,
-    height: 56,
-    backgroundColor: '#1E293B',
-  },
-  inputContainerFocused: {
-    borderColor: '#2563EB',
-  },
-  eyeIcon: {
-    marginLeft: 8,
-  },
-  icon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#F1F5F9',
-  },
-  button: {
-    backgroundColor: '#2563EB',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  buttonDisabled: {
-    backgroundColor: '#475569',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  loginText: {
-    textAlign: 'center',
-    marginTop: 24,
-    color: '#94A3B8',
-    fontSize: 15,
-  },
-  loginLink: {
-    color: '#60A5FA',
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 30, letterSpacing: 0.5 },
+  profileImageSection: { alignItems: 'center', marginBottom: 30 },
+  profileImageContainer: { marginBottom: 10, padding: 10 },
+  imageWrapper: { position: 'relative' },
+  profileImage: { width: 150, height: 150, borderRadius: 100, borderWidth: 3 },
+  removeImageButton: { position: 'absolute', top: -5, right: -5, borderRadius: 12, padding: 2 },
+  placeholderImage: { width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  placeholderText: { marginTop: 8, fontSize: 12, textAlign: 'center' },
+  profileImageHint: { fontSize: 12, textAlign: 'center', marginTop: 4 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, marginBottom: 20, paddingHorizontal: 16, height: 56 },
+  icon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 16 },
+  button: { padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 24 },
+  buttonText: { color: '#FFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
+  loginText: { textAlign: 'center', marginTop: 24, fontSize: 15 },
+  loginLink: { fontWeight: '600' },
 });
 
 export default SignupScreen;

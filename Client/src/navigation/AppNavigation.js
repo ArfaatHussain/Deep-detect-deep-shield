@@ -13,26 +13,29 @@ import VideoDetection from "../screens/VideoDetection";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import History from "../screens/History";
+import ProtectScreen from "../screens/ProtectScreen";
+import VerifyScreen from "../screens/VerifyScreen";
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const BottomTabs = () => {
     return (
         <Tab.Navigator
-        initialRouteName="Dashboard"
+            initialRouteName="Dashboard"
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarStyle: {
-                    height: 70,            
-                    paddingBottom: 10,     
-                    paddingTop: 5,         
+                    height: 70,
+                    paddingBottom: 10,
+                    paddingTop: 5,
                 },
                 tabBarIcon: ({ color, size }) => {
                     let iconName;
                     if (route.name === "Dashboard") {
                         iconName = "home-outline";
-                    } 
-                    else if (route.name === "History"){
+                    }
+                    else if (route.name === "History") {
                         iconName = "repeat-outline"
                     }
                     else if (route.name === "Settings") {
@@ -52,6 +55,8 @@ const BottomTabs = () => {
 const AppNavigation = ({ darkTheme }) => {
     const [user, setUser] = useState();
     const [loading, setLoading] = useState(true);
+
+
 
     useEffect(() => {
         const checkUser = async () => {
@@ -81,6 +86,8 @@ const AppNavigation = ({ darkTheme }) => {
             <Stack.Navigator
                 screenOptions={{
                     headerShown: false,
+                    gestureEnabled: true,
+                    gestureDirection: "horizontal",
                 }}
                 initialRouteName={user && Object.keys(user).length > 0 ? "BottomTabs" : "Login"}
             >
@@ -91,6 +98,8 @@ const AppNavigation = ({ darkTheme }) => {
                 <Stack.Screen name="Splash" component={SplashScreen} />
                 <Stack.Screen name="TamperProof" component={TamperProof} />
                 <Stack.Screen name="VideoDetection" component={VideoDetection} />
+                <Stack.Screen name="ProtectScreen" component={ProtectScreen} />
+                <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

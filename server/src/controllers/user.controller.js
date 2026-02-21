@@ -14,7 +14,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 const getHistory = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const BASE_URL = process.env.BASE_URL || "http://localhost:"+process.env.PORT;
+    const BASE_URL = process.env.BASE_URL || "http://localhost:" + process.env.PORT;
 
     if (!userId) throw new ApiError(400, "User id is required");
     if (!mongoose.Types.ObjectId.isValid(userId)) throw new ApiError(400, "User id is not valid");
@@ -22,8 +22,15 @@ const getHistory = asyncHandler(async (req, res) => {
     const imageDetectionHistory = await Image.find({ owner: userId }).lean();
     const videoDetectionHistory = await Video.find({ owner: userId }).lean();
 
-    if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0)
-        throw new ApiError(404, "No history found");
+    if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: "No history found",
+            imageHistory: [],
+            videoHistory: [],
+        });
+    }
+
 
     const imagesWithUrl = imageDetectionHistory.map((img) => ({
         ...img,
@@ -49,4 +56,32 @@ const getHistory = asyncHandler(async (req, res) => {
     });
 });
 
-export { getAllUsers, getHistory }
+const clearHistory = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) throw new ApiError(400, "User id is required");
+    if (!mongoose.Types.ObjectId.isValid(userId))
+        throw new ApiError(400, "User id is not valid");
+
+    // Check if history exists
+    const imageCount = await Image.countDocuments({ owner: userId });
+    const videoCount = await Video.countDocuments({ owner: userId });
+
+    if (imageCount === 0 && videoCount === 0) {
+        return res.status(200).json({
+            success: false,
+            message: "No history found",
+        });
+    }
+
+    // Delete all history
+    await Image.deleteMany({ owner: userId });
+    await Video.deleteMany({ owner: userId });
+
+    res.status(200).json({
+        success: true,
+        message: "History cleared successfully",
+    });
+});
+
+export { getAllUsers, getHistory, clearHistory }
