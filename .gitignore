@@ -5,7 +5,7 @@ server/uploads/
 
 # Python (server)
 python server/__pycache__/
-python server/env/
+python server/venv/
 python server/static/
 python server/model/__pycache__/
 python server/model/env/
