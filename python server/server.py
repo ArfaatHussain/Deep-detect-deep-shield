@@ -15,8 +15,6 @@ from face_extractor import detect_and_crop_face_and_hair
 from model import CustomXception  # import class definition
 import timm
 
-from routes.tamper_routes import tamper_bp
-
 
 # -----------------------------
 # 📦 Setup and Model Loading
@@ -44,9 +42,6 @@ print("✅ Model loaded successfully")
 # 🚀 Flask App Setup
 # -----------------------------
 app = Flask(__name__)
-
-# Register tamper blueprint
-app.register_blueprint(tamper_bp, url_prefix="/tamper")
 
 
 @app.route('/static/<filename>')
