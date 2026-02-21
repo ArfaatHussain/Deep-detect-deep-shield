@@ -20,15 +20,17 @@ export const protectImage = asyncHandler(async (req, res) => {
         hash
     }
     const protectedPath = await embedSteg(file.path, JSON.stringify(waterMarkData));
-    const imageUrl = `${req.protocol}://${req.get("host")}/${protectedPath.replace(/\\/g, "/")}`;
+    const protectedImageUrl = `http://${process.env.HOST}/${protectedPath.replace(/\\/g, "/")}`;
+    const originalImageUrl = `http://${process.env.HOST}/${file.path.replace(/\\/g, "/")}`;
     const tamperRecord = await TamperProof.create({
         owner: ownerId,
-        imageUrl,
+        imageUrl: originalImageUrl,
         hash,
-        watermark: WATERMARK
+        protectedImageUrl: protectedImageUrl,
+        watermark: WATERMARK,
     });
 
-    res.json({ success: true, tamperRecord, });
+    res.json({ success: true, tamperRecord});
 });
 
 export const verifyImage = asyncHandler(async (req, res) => {
@@ -36,10 +38,6 @@ export const verifyImage = asyncHandler(async (req, res) => {
     const id = req.params.id;
     if (!id) throw new ApiError("Image ID is required", 400);
     if (!file) throw new ApiError("No image uploaded", 400);
-
-    const buffer = fs.readFileSync(file.path);
-
-    const newHash = generateHash(buffer);
 
     const storedImage = await TamperProof.findById(id);
     if (!storedImage) {

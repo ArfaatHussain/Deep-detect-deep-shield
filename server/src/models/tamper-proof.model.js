@@ -11,7 +11,8 @@ const tamperProofSchema = new mongoose.Schema({
         required: true,
     },
     hash: { type: String, required: true },     
-    watermark: { type: String, required: true },  
+    watermark: { type: String, required: true },
+    protectedImageUrl: { type: String, required: true },
 
 }, {
     timestamps: true,

@@ -50,10 +50,10 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
 
         fs.copyFileSync(pythonImagePath, localPath);
         fs.unlinkSync(pythonImagePath);
-        resultImage = `${localPath.replace(/\\/g, "/")}`;
+        resultImage = `${req.protocol}://${process.env.HOST}/${localPath.replace(/\\/g, "/")}`;
     }
 
-    const uploadedImageUrl = `${req.file.path.replace(/\\/g, "/")}`;
+    const uploadedImageUrl = `${req.protocol}://${process.env.HOST}/${req.file.path.replace(/\\/g, "/")}`;
     await Image.create({
         owner,
         imageUrl: uploadedImageUrl,
