@@ -21,10 +21,19 @@ const getHistory = asyncHandler(async (req, res) => {
     if (!userId) throw new ApiError(400, "User id is required");
     if (!mongoose.Types.ObjectId.isValid(userId)) throw new ApiError(400, "User id is not valid");
 
-    const imageDetectionHistory = await Image.find({ owner: userId }).lean();
-    const videoDetectionHistory = await Video.find({ owner: userId }).lean();
-    const tamperHistory = await TamperProof.find({owner: userId}).select("-hash -watermark -protectedImageUrl").lean();
-    const tamperProofHistory = await TamperProofHistory.find({owner: userId}).lean();
+    const [
+        imageDetectionHistory,
+        videoDetectionHistory,
+        tamperHistory,
+        tamperProofHistory
+    ] = await Promise.all([
+        Image.find({ owner: userId }).lean(),
+        Video.find({ owner: userId }).lean(),
+        TamperProof.find({ owner: userId })
+            .select("-hash -watermark -protectedImageUrl")
+            .lean(),
+        TamperProofHistory.find({ owner: userId }).lean()
+    ]);
 
     if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0 && tamperHistory.length === 0 && tamperProofHistory.length === 0) {
         return res.status(200).json({
@@ -38,10 +47,10 @@ const getHistory = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json({
-        // imageHistory: imageDetectionHistory,
-        // videoHistory: videoDetectionHistory,
+        imageHistory: imageDetectionHistory,
+        videoHistory: videoDetectionHistory,
         tamperHistory: tamperHistory,
-        tamperProofHistory: tamperProofHistory,
+        tamperVerificationHistory: tamperProofHistory,
     });
 });
 
