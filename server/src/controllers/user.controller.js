@@ -14,7 +14,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 const getHistory = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const BASE_URL = process.env.BASE_URL || "http://localhost:"+process.env.PORT;
+    const BASE_URL = process.env.BASE_URL;
 
     if (!userId) throw new ApiError(400, "User id is required");
     if (!mongoose.Types.ObjectId.isValid(userId)) throw new ApiError(400, "User id is not valid");
