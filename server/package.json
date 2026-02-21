@@ -11,14 +11,17 @@
     "start": "nodemon -r dotenv/config --experimental-json-modules  src/index.js"
   },
   "dependencies": {
+    "@pinta365/steganography": "^0.3.2",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "form-data": "^4.0.4",
+    "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.2",
     "mongoose-aggregate-paginate-v2": "^1.1.4",
