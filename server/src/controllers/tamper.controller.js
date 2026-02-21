@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import fs from "fs";
 import { TamperProof } from '../models/tamper-proof.model.js';
 import { embedSteg, generateHash, extractSteg } from '../utils/helpers.js';
+import { TamperProofHistory } from "../models/tamper-proof-history.model.js";
 
 const WATERMARK = "Tamper-Protected-Image";
 
@@ -35,9 +36,10 @@ export const protectImage = asyncHandler(async (req, res) => {
 
 export const verifyImage = asyncHandler(async (req, res) => {
     const file = req.file;
-    const id = req.params.id;
+    const {id, owner} = req.body;
     if (!id) throw new ApiError("Image ID is required", 400);
     if (!file) throw new ApiError("No image uploaded", 400);
+    if (!owner) throw new ApiError("Owner ID is required", 400);
 
     const storedImage = await TamperProof.findById(id);
     if (!storedImage) {
@@ -52,8 +54,15 @@ export const verifyImage = asyncHandler(async (req, res) => {
     const watermarkMatched = extractedWatermark?.watermark === storedImage.watermark;
     const tampered = !(hashMatched && watermarkMatched);
 
-    fs.unlinkSync(file.path);
-
     res.json({ hashMatched, watermarkMatched, tampered });
+    const uploadedImageUrl = `${req.protocol}://${process.env.HOST}/${req.file.path.replace(/\\/g, "/")}`;
+    console.log("Uploaded Image URL:", uploadedImageUrl);
+    await TamperProofHistory.create({
+        owner,
+        imageUrl: uploadedImageUrl,
+        hashMatched,
+        watermarkMatched,
+        tampered,
+    })
 });
 

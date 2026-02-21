@@ -2,7 +2,6 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadFileOnCloudinary } from '../utils/cloudinary.js';
 import { Image } from '../models/image.model.js';
 import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';

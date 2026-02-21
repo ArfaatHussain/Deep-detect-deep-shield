@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError.js"
 import mongoose from "mongoose"
 import { Image } from "../models/image.model.js"
 import { Video } from "../models/video.model.js"
+import { TamperProof } from "../models/tamper-proof.model.js"
+import { TamperProofHistory } from "../models/tamper-proof-history.model.js"
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find()
     res.status(200).json({
@@ -21,38 +23,25 @@ const getHistory = asyncHandler(async (req, res) => {
 
     const imageDetectionHistory = await Image.find({ owner: userId }).lean();
     const videoDetectionHistory = await Video.find({ owner: userId }).lean();
+    const tamperHistory = await TamperProof.find({owner: userId}).select("-hash -watermark -protectedImageUrl").lean();
+    const tamperProofHistory = await TamperProofHistory.find({owner: userId}).lean();
 
-    if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0) {
+    if (imageDetectionHistory.length === 0 && videoDetectionHistory.length === 0 && tamperHistory.length === 0 && tamperProofHistory.length === 0) {
         return res.status(200).json({
             success: true,
             message: "No history found",
             imageHistory: [],
             videoHistory: [],
+            tamperHistory: [],
+            tamperProofHistory: [],
         });
     }
 
-
-    const imagesWithUrl = imageDetectionHistory.map((img) => ({
-        ...img,
-        imageUrl: img.imageUrl ? BASE_URL + "/" + img.imageUrl.replace("\\", "/") : null,
-        detectionResult: img.detectionResult
-            ? {
-                ...img.detectionResult,
-                resultImage: img.detectionResult.resultImage
-                    ? BASE_URL + "/" + img.detectionResult.resultImage.replace("\\", "/")
-                    : null,
-            }
-            : null,
-    }));
-
-    const videosWithUrl = videoDetectionHistory.map((vid) => ({
-        ...vid,
-        videoUrl: vid.videoUrl ? BASE_URL + "/" + vid.videoUrl.replace("\\", "/") : null,
-    }));
-
     res.status(200).json({
-        imageHistory: imagesWithUrl,
-        videoHistory: videosWithUrl,
+        // imageHistory: imageDetectionHistory,
+        // videoHistory: videoDetectionHistory,
+        tamperHistory: tamperHistory,
+        tamperProofHistory: tamperProofHistory,
     });
 });
 
