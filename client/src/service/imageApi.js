@@ -1,0 +1,36 @@
+
+import axios from "axios";
+// import { API_URL } from "../Constants"; 
+import { API_URL } from "../../config";
+export const detectImage = async (file, owner) => {
+  try {
+    const url = `${API_URL}/image/detectImage`;
+    console.log("Posting to:", url, "with owner:", owner);
+
+    const formData = new FormData();
+
+    // Append the file
+    formData.append("file", {
+      uri: file.uri,
+      type: file.type || "image/jpeg",
+      name: file.fileName || `image-${Date.now()}.jpg`,
+    });
+
+    // Append the owner ID
+    formData.append("owner", owner);
+
+    // Make POST request
+    const response = await axios.post(url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data", // Let Axios handle FormData
+        Accept: "application/json",
+      },
+    });
+
+    // console.log("Server response:", response.data);
+    return response.data;
+
+  } catch (error) {
+    throw error;
+  }
+};
