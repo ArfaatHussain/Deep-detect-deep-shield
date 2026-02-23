@@ -4,16 +4,16 @@ server/.env
 server/uploads/
 
 # Python (server)
-python server/__pycache__/
-python server/venv/
-python server/static/
+python-server/__pycache__/
+python-server/venv/
+python-server/static/
 # Generated Grad-CAM images
-python server/static/grad_cam_output_*.png
+python-server/static/grad_cam_output_*.png
 
-python server/_pycache_/
-python server/env/
-python server/testing images/
-python server/trained_models/
+python-server/_pycache_/
+python-server/env/
+python-server/testing images/
+python-server/trained_models/
 
 
 
