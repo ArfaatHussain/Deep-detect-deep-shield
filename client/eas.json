@@ -1,5 +1,5 @@
 {
-    "build": {
+  "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal"
@@ -10,5 +10,8 @@
     "production": {
       "autoIncrement": true
     }
-}
+  },
+  "cli": {
+    "appVersionSource": "remote"
+  }
 }

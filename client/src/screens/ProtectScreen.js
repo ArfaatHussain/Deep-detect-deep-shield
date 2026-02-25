@@ -74,18 +74,23 @@ const ProtectScreen = ({ navigation }) => {
     setDownloadLoading(true);
     try {
       if (permissionResponse?.status !== 'granted') {
-        await requestPermission();
+        const res = await requestPermission();
+        if (!res.granted) {
+          showToast('Permission denied');
+          setDownloadLoading(false);
+          return;
+        }
       }
 
       const imageUrl = `${PYTHON_API_URL}${result.protectedImageUrl}`;
-
       const fileName = imageUrl.split('/uploads/').pop();
-      const tempDir = new Directory(Paths.cache, 'temp');
-      tempDir.createDirectory();
 
-      const file = await File.downloadFileAsync(imageUrl);
-      console.log("File: ",file)
-      // await MediaLibrary.createAssetAsync(file.uri);
+      // Use Expo FileSystem for temp storage
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      const downloaded = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+      // Save to gallery
+      await MediaLibrary.createAssetAsync(downloaded.uri);
 
       showToast('Protected image saved to gallery!');
     } catch (err) {

@@ -7,13 +7,14 @@ import { TamperProofHistory } from "../models/tamper-proof-history.model.js";
 
 export const addDocumentToTamperProof = asyncHandler(async (req, res) => {
     const { original_image_url, protected_image_url, owner } = req.body
-
+    const ownerId = req.body.owner?.trim();
+    console.log("Owner: ",ownerId)
     if (!original_image_url || !protected_image_url || !owner) {
         throw new ApiError(400, "Provide all fields")
     }
 
     const document = await TamperProof.create({
-        owner,
+        owner: ownerId,
         originalImageUrl: original_image_url,
         protectedImageUrl: protected_image_url
     })

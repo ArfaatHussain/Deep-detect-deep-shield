@@ -97,16 +97,18 @@ const ImageDetection = ({ navigation }) => {
   };
 
   const downloadPhoto = async (photoUrl) => {
-    const fileName = photoUrl.replace(/^.*[\\\/]/, '');
-    let imageFullPathInLocalStorage = FileSystem.documentDirectory + fileName;
-
-    return new Promise(async (resolve) => {
-      FileSystem.downloadAsync(photoUrl, imageFullPathInLocalStorage)
-        .then(async ({ uri }) => {
-          await MediaLibrary.saveToLibraryAsync(imageFullPathInLocalStorage);
-          return resolve(imageFullPathInLocalStorage);
-        });
-    });
+    try {
+      const fileName = photoUrl.replace(/^.*[\\\/]/, '');
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      console.log("File name: ",fileName)
+      console.log("File url: ",fileUri)
+      const { uri } = await FileSystem.downloadAsync(`${API_URL}${photoUrl}`, fileUri);
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      return asset.uri;
+    } catch (err) {
+      console.error('Download photo error:', err);
+      return null;
+    }
   };
 
   const downloadImage = async () => {
