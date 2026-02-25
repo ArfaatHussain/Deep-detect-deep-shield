@@ -12,6 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
+import { File, Directory, Paths, } from 'expo-file-system';
 // import axios from 'axios';
 import { pickImageFromGallery } from '../utils/ImagePickerHelper';
 import { ThemeContext } from '../context/ThemeContext';
@@ -20,6 +21,7 @@ import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
 import { protectImage } from '../service/tamper_api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PYTHON_API_URL } from '../../config';
 
 const screenWidth = Dimensions.get('window').width;
 const showToast = (msg) => Toast.show(msg);
@@ -32,6 +34,7 @@ const ProtectScreen = ({ navigation }) => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
   // Select image from gallery
   const selectImage = async () => {
@@ -49,14 +52,13 @@ const ProtectScreen = ({ navigation }) => {
     try {
       const form = new FormData();
       const uri = image.uri.startsWith('file://') ? image.uri : `file://${image.uri}`;
-      form.append('file', { uri, name: 'image.jpg', type: 'image/jpeg' });
+      form.append('image', { uri, name: 'image.jpg', type: 'image/jpeg' });
       const userString = await AsyncStorage.getItem("user")
       const userData = userString ? JSON.parse(userString) : {}
-      form.append("owner",userData._id)
-      // console.log(userData);
+      form.append("owner", userData._id)
       const res = await protectImage(form)
-      setResult(res.tamperRecord);
-      showToast('Image protected successfully!');
+      const refinedData = res.backend_response.document
+      setResult(refinedData);
     } catch (err) {
       console.log('Upload error:', err);
       showToast('Upload failed. Make sure the Tamper server is running.');
@@ -67,28 +69,27 @@ const ProtectScreen = ({ navigation }) => {
 
   // Download protected image to device
   const downloadProtectedImage = async () => {
-    if (!result || !result.protectedImage) return showToast('No protected image available!');
+    if (!result?.protectedImageUrl) return showToast('No protected image!');
+
     setDownloadLoading(true);
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return showToast('Permission required to save image!');
+      if (permissionResponse?.status !== 'granted') {
+        await requestPermission();
+      }
 
-      const cacheDir = `${FileSystem.cacheDirectory}tamper/`;
-      const dirInfo = await FileSystem.getInfoAsync(cacheDir);
-      if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
+      const imageUrl = `${PYTHON_API_URL}${result.protectedImageUrl}`;
 
-      // Full URL to protected image
-      const imageUrl = `${TAMPER_API_URL.replace('/tamper','')}/${result.protectedImage.replace(/\\/g, '/')}`;
-      const filename = result.protectedImage.split('/').pop();
-      const localPath = `${cacheDir}${filename}`;
+      const fileName = imageUrl.split('/uploads/').pop();
+      const tempDir = new Directory(Paths.cache, 'temp');
+      tempDir.createDirectory();
 
-      await FileSystem.downloadAsync(imageUrl, localPath);
-      const asset = await MediaLibrary.createAssetAsync(localPath);
-      await MediaLibrary.createAlbumAsync('Download', asset, false);
+      const file = await File.downloadFileAsync(imageUrl);
+      console.log("File: ",file)
+      // await MediaLibrary.createAssetAsync(file.uri);
 
       showToast('Protected image saved to gallery!');
     } catch (err) {
-      console.log('Download error:', err);
+      console.error('Download error:', err);
       showToast('Failed to download image.');
     } finally {
       setDownloadLoading(false);
@@ -145,7 +146,7 @@ const ProtectScreen = ({ navigation }) => {
       {result && (
         <View style={[styles.resultBox, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
           <Image
-            source={{uri:result.protectedImageUrl}}
+            source={{ uri: `${PYTHON_API_URL}${result.protectedImageUrl}` }}
             style={styles.resultImage}
             resizeMode="contain"
           />

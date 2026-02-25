@@ -15,14 +15,13 @@ import { loadUser } from '../utils/loadUser';
 import { useFocusEffect } from '@react-navigation/native';
 import { getHistory } from '../service/userService';
 import { getTheme } from '../context/theme';
-
+import * as MediaLibrary from 'expo-media-library';
 
 const Dashboard = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [analytics, setAnalytics] = useState({});
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const { darkTheme } = useContext(ThemeContext);
-
 
   const t = getTheme(darkTheme);
 

@@ -15,16 +15,16 @@ import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
 import { detectImage } from '../service/imageApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as MediaLibrary from 'expo-media-library';
 import { getTheme } from '../context/theme';
 import { API_URL } from '../../config';
-
+import * as MediaLibrary from 'expo-media-library';
 const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const { darkTheme } = useContext(ThemeContext);
+  const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
 
   const t = getTheme(darkTheme);
 
@@ -245,7 +245,7 @@ const ImageDetection = ({ navigation }) => {
 
 // ---------- THEME VARIABLES ----------
 const themeStyles = (darkTheme) => ({
- 
+
 });
 
 const styles = StyleSheet.create({
