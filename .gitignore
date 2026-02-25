@@ -6,9 +6,9 @@ server/uploads/
 # Python (server)
 python-server/__pycache__/
 python-server/venv/
-python-server/static/
+python-server/uploads/
 # Generated Grad-CAM images
-python-server/static/grad_cam_output_*.png
+python-server/uploads/grad_cam_output_*.png
 
 python-server/_pycache_/
 python-server/env/
