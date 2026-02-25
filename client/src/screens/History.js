@@ -6,12 +6,15 @@ import { getHistory } from "../service/userService";
 import { loadUser } from "../utils/loadUser";
 import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
+import { API_URL, PYTHON_API_URL } from "../../config";
 
 export default function History() {
     const [activeTab, setActiveTab] = useState("image");
     const [user, setUser] = useState();
     const [imageHistory, setImageHistory] = useState([]);
     const [videoHistory, setVideoHistory] = useState([]);
+    const [tamperGenerationHistory, setTamperGenerationHistory] = useState([])
+    const [tamperVerificationHistory, setTamperVerificationHistory] = useState([])
     const { darkTheme } = useContext(ThemeContext);
 
     const t = getTheme(darkTheme);
@@ -42,6 +45,8 @@ export default function History() {
             const response = await getHistory(userId);
             setImageHistory(response.data.imageHistory || []);
             setVideoHistory(response.data.videoHistory || []);
+            setTamperGenerationHistory(response.data.tamperGenerationHistory || [])
+            setTamperVerificationHistory(response.data.tamperVerificationHistory || [])
         } catch (error) {
             setImageHistory([]);
             setVideoHistory([]);
@@ -49,54 +54,84 @@ export default function History() {
         }
     };
 
+    function getUrl() {
+        if (activeTab == "image") return API_URL
+        else if (activeTab == "video") return API_URL
+        else return PYTHON_API_URL
+    }
+
     const renderItem = ({ item }) => {
         const hasDetectionResult =
             item.detectionResult &&
             Object.keys(item.detectionResult).length > 0 &&
             item.detectionResult.resultImage;
 
-        return (
-            <View
-                style={[
-                    styles.historyCard,
-                    {
-                        backgroundColor: t.cardBg,
-                        borderColor: t.cardBorder,
-                        shadowOpacity: t.cardShadowOpacity,
-                    },
-                ]}
-            >
-                {hasDetectionResult ? (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <View style={{ flex: 1, marginRight: 8 }}>
-                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
-                                Original Image
-                            </Text>
-                            <Image source={{ uri: item.imageUrl }} style={styles.historyImage} />
-                        </View>
+        if (activeTab === "image") {
+            return (
+                <View
+                    style={[
+                        styles.historyCard,
+                        {
+                            backgroundColor: t.cardBg,
+                            borderColor: t.cardBorder,
+                            shadowOpacity: t.cardShadowOpacity,
+                        },
+                    ]}
+                >
+                    {hasDetectionResult ? (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                                    Original Image
+                                </Text>
+                                <Image source={{ uri: `${getUrl()}${item.imageUrl}` }} style={styles.historyImage} />
+                            </View>
 
-                        <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
-                                Detection Result
-                            </Text>
-                            <Image
-                                source={{ uri: item.detectionResult.resultImage }}
-                                style={styles.historyImage}
-                            />
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                                    Detection Result
+                                </Text>
+                                <Image
+                                    source={{ uri: `${API_URL}${item.detectionResult.resultImage}` }}
+                                    style={styles.historyImage}
+                                />
+                            </View>
                         </View>
-                    </View>
-                ) : (
-                    <Image
-                        source={{ uri: item.imageUrl }}
-                        style={[styles.historyImage, { width: '100%' }]}
-                    />
-                )}
+                    ) : (
+                        <Image
+                            source={{ uri: `${getUrl()}${item.imageUrl}` }}
+                            style={[styles.historyImage, { width: '100%' }]}
+                        />
+                    )}
 
-                <Text style={[styles.explanationText, { color: t.descriptionText }]}>
-                    {item.detectionResult?.explanation || ''}
-                </Text>
-            </View>
-        );
+                    <Text style={[styles.explanationText, { color: t.descriptionText }]}>
+                        {item.detectionResult?.explanation || ''}
+                    </Text>
+                </View>
+            );
+        } else if (activeTab === "video") {
+            return (
+                <View>
+                    <Text>Video module history</Text>
+                </View>
+            );
+        } else {
+            // Tamper history module
+            return (
+                <View
+                    style={[
+                        styles.historyCard,
+                        {
+                            backgroundColor: t.cardBg,
+                            borderColor: t.cardBorder,
+                            shadowOpacity: t.cardShadowOpacity,
+                        },
+                    ]}
+                >
+                    <Text>Tamper history module</Text>
+                </View>
+            );
+        }
     };
 
     return (
@@ -194,7 +229,7 @@ const styles = StyleSheet.create({
     historyImage: {
         height: 150,
         borderRadius: 12,
-        resizeMode: 'cover',
+        resizeMode: 'contain',
     },
     imageLabel: {
         marginBottom: 8,

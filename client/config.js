@@ -17,14 +17,9 @@ const getLocalIP = () => {
 const isDev = __DEV__;
 
 // Deepfake detection server (port 5000)
-export const API_URL = isDev
-  ? `http://${getLocalIP()}:5000`
-  : PROD_API_URL;
+export const API_URL = `http://${getLocalIP()}:5000`
 
-// Tamper server (port 5001)
-export const TAMPER_API_URL = isDev
-  ? `http://${getLocalIP()}:5001/tamper`
-  : `${PROD_API_URL}/tamper`;
+export const PYTHON_API_URL = `http://${getLocalIP()}:5001`
 
 console.log("🌐 API URL:", API_URL);
-// console.log("🌐 Tamper API URL:", TAMPER_API_URL);
+console.log("🌐 Python API URL:", PYTHON_API_URL);

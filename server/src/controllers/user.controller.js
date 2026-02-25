@@ -30,7 +30,6 @@ const getHistory = asyncHandler(async (req, res) => {
         Image.find({ owner: userId }).lean(),
         Video.find({ owner: userId }).lean(),
         TamperProof.find({ owner: userId })
-            .select("-hash -watermark -protectedImageUrl")
             .lean(),
         TamperProofHistory.find({ owner: userId }).lean()
     ]);
@@ -49,7 +48,7 @@ const getHistory = asyncHandler(async (req, res) => {
     res.status(200).json({
         imageHistory: imageDetectionHistory,
         videoHistory: videoDetectionHistory,
-        tamperHistory: tamperHistory,
+        tamperGenerationHistory: tamperHistory,
         tamperVerificationHistory: tamperProofHistory,
     });
 });

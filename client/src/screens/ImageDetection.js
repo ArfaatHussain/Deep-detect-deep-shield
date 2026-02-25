@@ -17,6 +17,7 @@ import { detectImage } from '../service/imageApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MediaLibrary from 'expo-media-library';
 import { getTheme } from '../context/theme';
+import { API_URL } from '../../config';
 
 const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -200,7 +201,7 @@ const ImageDetection = ({ navigation }) => {
               <Text style={[styles.infoTitle, { color: t.textPrimary }]}>Analyzed Image</Text>
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{ uri: result.analyzedImage }}
+                  source={{ uri: `${API_URL}${result.analyzedImage}` }}
                   style={styles.highlightedImage}
                   resizeMode="contain"
                 />
