@@ -10,3 +10,7 @@ matplotlib
 captum
 scikit-image
 uuid
+invisible-watermark
+grad-cam
+stegano
+requests

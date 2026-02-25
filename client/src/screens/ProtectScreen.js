@@ -12,12 +12,14 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
-import axios from 'axios';
+// import axios from 'axios';
 import { pickImageFromGallery } from '../utils/ImagePickerHelper';
 import { ThemeContext } from '../context/ThemeContext';
-import { TAMPER_API_URL } from '../../config';
+// import { TAMPER_API_URL } from '../../config';
 import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
+import { protectImage } from '../service/tamper_api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const screenWidth = Dimensions.get('window').width;
 const showToast = (msg) => Toast.show(msg);
@@ -47,17 +49,16 @@ const ProtectScreen = ({ navigation }) => {
     try {
       const form = new FormData();
       const uri = image.uri.startsWith('file://') ? image.uri : `file://${image.uri}`;
-      form.append('image', { uri, name: 'image.jpg', type: 'image/jpeg' });
-
-      // Call Tamper protect endpoint
-      const res = await axios.post(`${TAMPER_API_URL}/protect`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setResult(res.data);
+      form.append('file', { uri, name: 'image.jpg', type: 'image/jpeg' });
+      const userString = await AsyncStorage.getItem("user")
+      const userData = userString ? JSON.parse(userString) : {}
+      form.append("owner",userData._id)
+      // console.log(userData);
+      const res = await protectImage(form)
+      setResult(res.tamperRecord);
       showToast('Image protected successfully!');
     } catch (err) {
-      console.log('Upload error:', err.message || err);
+      console.log('Upload error:', err);
       showToast('Upload failed. Make sure the Tamper server is running.');
     } finally {
       setLoading(false);
@@ -141,10 +142,10 @@ const ProtectScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Result */}
-      {result && result.protectedImage && (
+      {result && (
         <View style={[styles.resultBox, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
           <Image
-            source={{ uri: `${TAMPER_API_URL.replace('/tamper','')}/${result.protectedImage.replace(/\\/g, '/')}` }}
+            source={{uri:result.protectedImageUrl}}
             style={styles.resultImage}
             resizeMode="contain"
           />

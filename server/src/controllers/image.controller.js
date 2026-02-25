@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import fs from 'fs';
 import path from "path";
+import { uploadFileToDrive } from '../utils/uploadFileToDrive.js';
 
 const detectImageForDeepfake = asyncHandler(async (req, res) => {
     const { owner } = req.body
@@ -72,4 +73,14 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
     })
 });
 
-export { detectImageForDeepfake };
+const uploadFile = asyncHandler(async (req,res)=>{
+    if(!req.file){
+        throw new ApiError(400,"Provide file")
+    }
+    const uploadedFileUrl = await uploadFileToDrive(req.file)
+    res.status(200).json({
+        uploadedFileUrl
+    })
+})
+
+export { detectImageForDeepfake, uploadFile };

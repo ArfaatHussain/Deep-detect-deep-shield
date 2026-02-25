@@ -12,14 +12,16 @@ import traceback
 from grad_cam_generator import create_gradcam_overlay, generate_layer_cam ,postprocess_cam
 from xai import analyze_heatmap_regions, generate_dynamic_explanation
 from face_extractor import detect_and_crop_face_and_hair
-from model import CustomXception  # import class definition
+from model import CustomXception  
 import timm
-
-
+from werkzeug.utils import secure_filename
+from stegano import lsb
+import requests
 # -----------------------------
 # 📦 Setup and Model Loading
 # -----------------------------
-os.makedirs('static', exist_ok=True)
+UPLOAD_DIR = "uploads/"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 print("Loading PyTorch model...")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,6 +39,7 @@ model.to(device)
 model.eval()
 
 print("✅ Model loaded successfully")
+WATERMARK="protected"
 
 # -----------------------------
 # 🚀 Flask App Setup
@@ -44,9 +47,9 @@ print("✅ Model loaded successfully")
 app = Flask(__name__)
 
 
-@app.route('/static/<filename>')
+@app.route('/uploads/<filename>')
 def send_image(filename):
-    return send_from_directory('static', filename)
+    return send_from_directory('uploads', filename)
 
 # -----------------------------
 # 🧠 Prediction Endpoint
@@ -134,12 +137,93 @@ def predict():
         print("Error during prediction:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
+UPLOAD_DIR = "uploads"
+
+@app.route("/embed", methods=["POST"])
+def embed_watermark():
+    if "image" not in request.files:
+        return jsonify({"error": "Missing image"}), 400
+
+    file = request.files["image"]
+    owner = request.form.get("owner")
+    if not owner:
+        return jsonify({"error": "provide owner id"})
+
+    os.makedirs("uploads", exist_ok=True)
+
+    # Save original first
+    original_filename = f"uploads/original-{uuid.uuid4().hex}.png"
+    file.save(original_filename)
+
+    stego_image = lsb.hide(original_filename, WATERMARK)
+
+    protected_filename = f"uploads/protected-{uuid.uuid4().hex}.png"
+    stego_image.save(protected_filename)
+
+    data_to_send = {
+        "original_image_url": f"/{original_filename}",
+        "protected_image_url": f"/{protected_filename}",
+        "owner": owner
+    }
+
+    response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProof", json=data_to_send)
+
+    try:
+        backend_response = response.json()
+    except ValueError:
+        backend_response = response.text
+
+    return jsonify({
+        "status": response.status_code,
+        "backend_response": backend_response
+    }), response.status_code
+
+
+@app.route("/extract", methods=["POST"])
+def extract_watermark():
+
+    if "image" not in request.files:
+        return jsonify({"extracted_watermark": None, "error": "Missing image"}), 400
+
+    file = request.files["image"]
+    owner = request.form.get("owner")
+    if not owner:
+        return jsonify({"error": "provide owner id"})
+
+    os.makedirs("uploads", exist_ok=True)
+
+    provided_image = f"uploads/provided-{uuid.uuid4().hex}.png"
+    file.save(provided_image)
+    extract_watermark=""
+    watermark_matched = False
+    try:
+        extract_watermark = lsb.reveal(provided_image)
+
+        if  extract_watermark and extract_watermark == "protected":
+            watermark_matched = True 
+
+    except Exception as e:
+        print("Error: ",e)
+
+        data_to_send = {
+            "image_url": f"/{provided_image}", "watermarked_matched":watermark_matched,
+            "owner": owner 
+        }
+
+        response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProofHistory", json=data_to_send)
+
+        try:
+         backend_response = response.json()
+        except ValueError:
+         backend_response = response.text
+
+        return jsonify({
+        "status": response.status_code,
+        "backend_response": backend_response
+        }), response.status_code
+
 # -----------------------------
 # 🖥️ Run Server
 # -----------------------------
 if __name__ == '__main__':
-    for name, module in model.base_model.named_modules():
-        if isinstance(module, torch.nn.Conv2d):
-            print(name)
-
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True, use_reloader=False)

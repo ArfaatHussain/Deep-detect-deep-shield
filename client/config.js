@@ -27,4 +27,4 @@ export const TAMPER_API_URL = isDev
   : `${PROD_API_URL}/tamper`;
 
 console.log("🌐 API URL:", API_URL);
-console.log("🌐 Tamper API URL:", TAMPER_API_URL);
+// console.log("🌐 Tamper API URL:", TAMPER_API_URL);

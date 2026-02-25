@@ -6,12 +6,10 @@ const tamperProofSchema = new mongoose.Schema({
         ref: "User",
         required: true,
     },
-    imageUrl: {
+    originalImageUrl: {
         type: String,
         required: true,
-    },
-    hash: { type: String, required: true },     
-    watermark: { type: String, required: true },
+    }, 
     protectedImageUrl: { type: String, required: true },
 
 }, {

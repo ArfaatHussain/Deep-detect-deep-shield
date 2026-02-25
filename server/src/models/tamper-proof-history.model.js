@@ -10,8 +10,7 @@ const tamperProofHistorySchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    hashMatched: { type: Boolean, required: true },     
-    watermarkMatched: { type: Boolean, required: true },
+    watermarkedMatched: { type: Boolean, required: true },     
     tampered: {type: Boolean, required: true},
 }, {
     timestamps: true,
