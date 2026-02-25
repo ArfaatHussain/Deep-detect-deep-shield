@@ -7,7 +7,6 @@ import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import fs from 'fs';
 import path from "path";
-import { uploadFileToDrive } from '../utils/uploadFileToDrive.js';
 
 const detectImageForDeepfake = asyncHandler(async (req, res) => {
     const { owner } = req.body
