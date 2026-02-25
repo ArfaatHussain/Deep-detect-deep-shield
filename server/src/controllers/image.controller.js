@@ -42,17 +42,17 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
 
     let resultImage;
     if (predictionResult.class == "Fake Image") {
-        const pythonImagePath = path.join("..", "python server", predictionResult.highlightedImage);
+        const pythonImagePath = path.join("..", "python-server", predictionResult.highlightedImage);
 
         const filename = `result-${Date.now()}${path.extname(pythonImagePath)}`;
         const localPath = path.join("uploads", filename);
 
         fs.copyFileSync(pythonImagePath, localPath);
         fs.unlinkSync(pythonImagePath);
-        resultImage = `${req.protocol}://${process.env.HOST}/${localPath.replace(/\\/g, "/")}`;
+        resultImage = `/${localPath.replace(/\\/g, "/")}`;
     }
 
-    const uploadedImageUrl = `${req.protocol}://${process.env.HOST}/${req.file.path.replace(/\\/g, "/")}`;
+    const uploadedImageUrl = `/${req.file.path.replace(/\\/g, "/")}`;
     await Image.create({
         owner,
         imageUrl: uploadedImageUrl,
@@ -72,14 +72,4 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
     })
 });
 
-const uploadFile = asyncHandler(async (req,res)=>{
-    if(!req.file){
-        throw new ApiError(400,"Provide file")
-    }
-    const uploadedFileUrl = await uploadFileToDrive(req.file)
-    res.status(200).json({
-        uploadedFileUrl
-    })
-})
-
-export { detectImageForDeepfake, uploadFile };
+export { detectImageForDeepfake };

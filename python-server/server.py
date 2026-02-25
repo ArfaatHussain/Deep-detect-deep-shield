@@ -119,7 +119,7 @@ def predict():
 
         # Save highlighted image
         unique_filename = f"gradcam_{uuid.uuid4().hex}.png"
-        output_path = os.path.join('static', unique_filename)
+        output_path = os.path.join('uploads', unique_filename)
         Image.fromarray(overlay).save(output_path)
 
         # Analyze heatmap and generate textual explanation
@@ -129,7 +129,7 @@ def predict():
         return jsonify({
             "class": label,
             "confidence_score": confidence_score,
-            "highlightedImage": f"/static/{unique_filename}",
+            "highlightedImage": f"/uploads/{unique_filename}",
             "explanation": explanation
         })
 
