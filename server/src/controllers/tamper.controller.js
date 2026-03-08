@@ -27,7 +27,8 @@ export const addDocumentToTamperProof = asyncHandler(async (req, res) => {
 export const addDocumentToTamperProofHistory = asyncHandler(async(req,res)=>{
     const {image_url, watermarked_matched, owner} = req.body
 
-    if(!image_url || watermarked_matched == null || watermarked_matched == undefined || !owner){
+     const ownerId = owner?.trim();
+    if(!image_url || watermarked_matched == null || watermarked_matched == undefined || !ownerId){
         throw new ApiError(400,"Provide all fields")
     }
 
@@ -35,7 +36,7 @@ export const addDocumentToTamperProofHistory = asyncHandler(async(req,res)=>{
         imageUrl: image_url,
         watermarkedMatched: watermarked_matched,
         tampered: !watermarked_matched,
-        owner
+        ownerId
     })
 
     res.status(201).json({

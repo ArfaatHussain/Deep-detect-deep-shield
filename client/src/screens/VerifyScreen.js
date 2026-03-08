@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,20 +13,35 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import { pickImageFromGallery } from '../utils/ImagePickerHelper';
 import { ThemeContext } from '../context/ThemeContext';
-import { TAMPER_API_URL } from '../../config';
+import { PYTHON_API_URL } from '../../config';
 import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
-
+import { loadUser } from '../utils/loadUser';
+import { verifyImage } from '../service/tamper_api';
 const screenWidth = Dimensions.get('window').width;
 const showToast = (msg) => Toast.show(msg);
 
 const VerifyScreen = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
-  const t =getTheme(darkTheme);
+  const t = getTheme(darkTheme);
 
   const [image, setImage] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const loadedUser = await loadUser();
+      if (loadedUser) {
+        setUser(loadedUser);
+        console.log("User loaded:", loadedUser);
+      }
+    };
+
+    getUser();
+  }, []);
 
   // Select image from gallery
   const selectImage = async () => {
@@ -45,17 +60,14 @@ const VerifyScreen = ({ navigation }) => {
       const form = new FormData();
       const uri = image.uri.startsWith('file://') ? image.uri : `file://${image.uri}`;
       form.append('image', { uri, name: 'image.jpg', type: 'image/jpeg' });
-      form.append('watermark', 'Tamper-Protected');
+      form.append('owner',user._id);
 
-      const res = await axios.post(`${TAMPER_API_URL}/verify`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      setResult(res.data);
+      const res = await verifyImage(form);
+      console.log("Result: ",res.data)
+      // setResult(res.data);
       showToast('Verification completed!');
     } catch (err) {
       console.log('Verification error:', err.message || err);
-      showToast('Verification failed. Make sure the Tamper server is running.');
     } finally {
       setLoading(false);
     }

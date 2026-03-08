@@ -3,7 +3,7 @@ import { API_URL, PYTHON_API_URL } from "../../config"
 
 export const protectImage = async(form) => {
   try {
-      const response = await axios.post(`${PYTHON_API_URL}/embed`, form, {
+      const response = await axios.post(`${PYTHON_API_URL}/protect`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       })
       return response.data
@@ -15,7 +15,7 @@ export const protectImage = async(form) => {
 
 export const verifyImage = async(form) => {
   try {
-      const response = await axios.post(`${PYTHON_API_URL}/extract`, form, {
+      const response = await axios.post(`${PYTHON_API_URL}/verify`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       })
       return response.data

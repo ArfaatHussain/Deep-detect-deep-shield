@@ -150,7 +150,7 @@ def predict():
  
 UPLOAD_DIR = "uploads"
 
-@app.route("/embed", methods=["POST"])
+@app.route("/protect", methods=["POST"])
 def embed_watermark():
     if "image" not in request.files:
         return jsonify({"error": "Missing image"}), 400
@@ -190,7 +190,7 @@ def embed_watermark():
     }), response.status_code
 
 
-@app.route("/extract", methods=["POST"])
+@app.route("/verify", methods=["POST"])
 def extract_watermark():
 
     if "image" not in request.files:
@@ -199,40 +199,43 @@ def extract_watermark():
     file = request.files["image"]
     owner = request.form.get("owner")
     if not owner:
-        return jsonify({"error": "provide owner id"})
+        return jsonify({"error": "provide owner id"}), 400
 
     os.makedirs("uploads", exist_ok=True)
 
     provided_image = f"uploads/provided-{uuid.uuid4().hex}.png"
     file.save(provided_image)
-    extract_watermark=""
-    watermark_matched = False
-    try:
-        extract_watermark = lsb.reveal(provided_image)
 
-        if  extract_watermark and extract_watermark == "protected":
-            watermark_matched = True 
+    extracted = ""
+    watermark_matched = False
+
+    try:
+        extracted = lsb.reveal(provided_image)
+        if extracted and extracted == "protected":
+            watermark_matched = True
 
     except Exception as e:
-        print("Error: ",e)
+        print("Error: ", e)
+        extracted = ""  # fallback on error
 
-        data_to_send = {
-            "image_url": f"/{provided_image}", "watermarked_matched":watermark_matched,
-            "owner": owner 
-        }
+    # ✅ This always runs, whether or not an exception occurred
+    data_to_send = {
+        "image_url": f"/{provided_image}",
+        "watermarked_matched": watermark_matched,
+        "owner": owner
+    }
 
-        response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProofHistory", json=data_to_send)
+    response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProofHistory", json=data_to_send)
 
-        try:
-         backend_response = response.json()
-        except ValueError:
-         backend_response = response.text
+    try:
+        backend_response = response.json()
+    except ValueError:
+        backend_response = response.text
 
-        return jsonify({
+    return jsonify({
         "status": response.status_code,
         "backend_response": backend_response
-        }), response.status_code
-
+    }), response.status_code
 
 @app.route("/predict-video", methods=["POST"])
 def predict_video():
