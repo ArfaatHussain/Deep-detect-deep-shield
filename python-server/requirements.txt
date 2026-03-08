@@ -14,3 +14,4 @@ invisible-watermark
 grad-cam
 stegano
 requests
+face-alignment

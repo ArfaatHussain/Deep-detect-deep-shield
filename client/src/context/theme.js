@@ -28,7 +28,7 @@ export const getTheme = (darkTheme) => ({
 
   // ---------- INPUT ----------
   inputBg: darkTheme ? '#1E293B' : '#FFFFFF',
-  inputBorder: darkTheme ? '#334155' : '#CBD5E1',
+  inputBorder: darkTheme ? '#334155' : '#747a81',
   focusBorder: '#2563EB',
   placeholder: darkTheme ? '#94A3B8' : '#94A3B8',
 

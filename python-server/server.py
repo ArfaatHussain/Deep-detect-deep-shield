@@ -17,6 +17,7 @@ import timm
 from werkzeug.utils import secure_filename
 from stegano import lsb
 import requests
+from video_model import DeepfakeVideoDetector
 # -----------------------------
 # 📦 Setup and Model Loading
 # -----------------------------
@@ -40,6 +41,16 @@ model.eval()
 
 print("✅ Model loaded successfully")
 WATERMARK="protected"
+
+
+# ---------------------------------
+#    Video Model Config
+
+MODEL_PATH = "trained_models/deepfake-video-detection.pth"
+detector = DeepfakeVideoDetector(MODEL_PATH)
+
+
+# -------------------------------
 
 # -----------------------------
 # 🚀 Flask App Setup
@@ -136,7 +147,7 @@ def predict():
     except Exception as e:
         print("Error during prediction:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
-
+ 
 UPLOAD_DIR = "uploads"
 
 @app.route("/embed", methods=["POST"])
@@ -221,6 +232,29 @@ def extract_watermark():
         "status": response.status_code,
         "backend_response": backend_response
         }), response.status_code
+
+
+@app.route("/predict-video", methods=["POST"])
+def predict_video():
+
+    if "video" not in request.files:
+        return jsonify({"error": "No video uploaded"}), 400
+
+    file = request.files["video"]
+
+    video_path = os.path.join(UPLOAD_DIR, file.filename)
+
+    file.save(video_path)
+
+    label, prob = detector.predict(video_path)
+
+    os.remove(video_path)
+
+    return jsonify({
+        "prediction": label,
+        "confidence": float(prob)
+    })
+
 
 # -----------------------------
 # 🖥️ Run Server
