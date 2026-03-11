@@ -17,7 +17,7 @@ import { PYTHON_API_URL } from '../../config';
 import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
 import { loadUser } from '../utils/loadUser';
-import { verifyImage } from '../service/tamper_api';
+import { verifyImage as verifyImageService } from '../service/tamper_api';
 const screenWidth = Dimensions.get('window').width;
 const showToast = (msg) => Toast.show(msg);
 
@@ -36,7 +36,7 @@ const VerifyScreen = ({ navigation }) => {
       const loadedUser = await loadUser();
       if (loadedUser) {
         setUser(loadedUser);
-        console.log("User loaded:", loadedUser);
+        // console.log("User loaded:", loadedUser);
       }
     };
 
@@ -60,11 +60,12 @@ const VerifyScreen = ({ navigation }) => {
       const form = new FormData();
       const uri = image.uri.startsWith('file://') ? image.uri : `file://${image.uri}`;
       form.append('image', { uri, name: 'image.jpg', type: 'image/jpeg' });
-      form.append('owner',user._id);
+      form.append('owner', user._id);
 
-      const res = await verifyImage(form);
-      console.log("Result: ",res.data)
-      // setResult(res.data);
+      const res = await verifyImageService(form);
+      const data = res.backend_response.document
+      // console.log("Result: ",res.backend_response.document)
+      setResult(data);
       showToast('Verification completed!');
     } catch (err) {
       console.log('Verification error:', err.message || err);
@@ -123,30 +124,26 @@ const VerifyScreen = ({ navigation }) => {
 
       {/* Result Card */}
       {result && (
-        <View
-          style={[
-            styles.resultCard,
-            {
-              backgroundColor: result.tampered ? '#FEE2E2' : '#D1FAE5',
-              borderColor: result.tampered ? '#FCA5A5' : '#34D399',
-            },
-          ]}
-        >
+        <View style={[styles.resultCard, {
+          backgroundColor: result.tampered ? '#FEE2E2' : '#D1FAE5',
+          borderColor: result.tampered ? '#FCA5A5' : '#34D399',
+        }]}>
           <Icon
             name={result.tampered ? 'close-circle' : 'checkmark-circle'}
             size={40}
             color={result.tampered ? '#B91C1C' : '#047857'}
             style={{ marginBottom: 10 }}
           />
-          <Text
-            style={[
-              styles.resultCardText,
-              { color: result.tampered ? '#B91C1C' : '#047857' },
-            ]}
-          >
-            {result.tampered
-              ? 'Tampered (Watermark Missing)'
-              : 'Authentic (Watermark Found)'}
+          <Text style={[styles.resultCardText, { color: result.tampered ? '#B91C1C' : '#047857' }]}>
+            {result.tampered ? 'Tampered (Watermark Missing)' : 'Authentic (Watermark Found)'}
+          </Text>
+
+          {/* Extra details */}
+          <Text style={{ marginTop: 8, color: '#6B7280', fontSize: 13 }}>
+            Watermark Match: {result.watermarkedMatched ? 'Yes' : 'No'}
+          </Text>
+          <Text style={{ color: '#6B7280', fontSize: 13 }}>
+            Verified At: {new Date(result.createdAt).toLocaleString()}
           </Text>
         </View>
       )}

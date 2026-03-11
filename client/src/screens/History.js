@@ -10,6 +10,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
 import { API_URL, PYTHON_API_URL } from "../../config";
 import Toast from 'react-native-simple-toast';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function History() {
     const [activeTab, setActiveTab] = useState("image");
@@ -19,16 +20,16 @@ export default function History() {
     const [tamperGenerationHistory, setTamperGenerationHistory] = useState([]);
     const [tamperVerificationHistory, setTamperVerificationHistory] = useState([]);
     const { darkTheme } = useContext(ThemeContext);
-    
+
     // Download states
     const [downloadLoading, setDownloadLoading] = useState({});
     const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
-    
+
     // Filter states
     const [showFilterModal, setShowFilterModal] = useState(false);
     const [imageVideoFilter, setImageVideoFilter] = useState("all"); // all, real, fake
     const [tamperFilter, setTamperFilter] = useState("all"); // all, protect, verify
-    
+
     // Filtered data states
     const [filteredImageHistory, setFilteredImageHistory] = useState([]);
     const [filteredVideoHistory, setFilteredVideoHistory] = useState([]);
@@ -78,9 +79,6 @@ export default function History() {
     const getUserHistory = async (userId) => {
         try {
             const response = await getHistory(userId);
-            console.log("Tamper Generation History:", response.data.tamperGenerationHistory);
-            console.log("Tamper Verification History:", response.data.tamperVerificationHistory);
-            
             setImageHistory(response.data.imageHistory || []);
             setVideoHistory(response.data.videoHistory || []);
             setTamperGenerationHistory(response.data.tamperGenerationHistory || []);
@@ -88,6 +86,8 @@ export default function History() {
         } catch (error) {
             setImageHistory([]);
             setVideoHistory([]);
+            setTamperGenerationHistory([]);
+            setTamperVerificationHistory([])
             console.error(error);
         }
     };
@@ -98,10 +98,10 @@ export default function History() {
             setFilteredImageHistory(imageHistory);
         } else {
             const filtered = imageHistory.filter(item => {
-                const hasDetectionResult = item.detectionResult && 
-                    Object.keys(item.detectionResult).length > 0 && 
+                const hasDetectionResult = item.detectionResult &&
+                    Object.keys(item.detectionResult).length > 0 &&
                     item.detectionResult.resultImage;
-                
+
                 if (imageVideoFilter === "real") {
                     return !hasDetectionResult;
                 } else if (imageVideoFilter === "fake") {
@@ -117,10 +117,10 @@ export default function History() {
             setFilteredVideoHistory(videoHistory);
         } else {
             const filtered = videoHistory.filter(item => {
-                const hasDetectionResult = item.detectionResult && 
-                    Object.keys(item.detectionResult).length > 0 && 
+                const hasDetectionResult = item.detectionResult &&
+                    Object.keys(item.detectionResult).length > 0 &&
                     item.detectionResult.resultVideo;
-                
+
                 if (imageVideoFilter === "real") {
                     return !hasDetectionResult;
                 } else if (imageVideoFilter === "fake") {
@@ -226,7 +226,7 @@ export default function History() {
                 animationType="fade"
                 onRequestClose={() => setShowFilterModal(false)}
             >
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.modalOverlay}
                     activeOpacity={1}
                     onPress={() => setShowFilterModal(false)}
@@ -240,7 +240,7 @@ export default function History() {
                                 <Ionicons name="close" size={24} color={t.text} />
                             </TouchableOpacity>
                         </View>
-                        
+
                         {options.map((option) => (
                             <TouchableOpacity
                                 key={option.id}
@@ -253,14 +253,14 @@ export default function History() {
                                     setShowFilterModal(false);
                                 }}
                             >
-                                <Ionicons 
-                                    name={option.icon} 
-                                    size={20} 
-                                    color={currentFilter === option.id ? t.tabActiveText : t.text} 
+                                <Ionicons
+                                    name={option.icon}
+                                    size={20}
+                                    color={currentFilter === option.id ? t.tabActiveText : t.text}
                                 />
                                 <Text style={[
-                                    styles.filterOptionText, 
-                                    { 
+                                    styles.filterOptionText,
+                                    {
                                         color: currentFilter === option.id ? t.tabActiveText : t.text,
                                         fontWeight: currentFilter === option.id ? '600' : '400'
                                     }
@@ -286,7 +286,7 @@ export default function History() {
 
     const renderTamperItem = ({ item }) => {
         const isProtect = tamperGenerationHistory.some(genItem => genItem._id === item._id);
-        
+
         return (
             <View
                 style={[
@@ -307,10 +307,10 @@ export default function History() {
                             },
                         ]}
                     >
-                        <Ionicons 
-                            name={isProtect ? "shield" : "scan"} 
-                            size={12} 
-                            color="#fff" 
+                        <Ionicons
+                            name={isProtect ? "shield" : "scan"}
+                            size={12}
+                            color="#fff"
                         />
                         <Text style={styles.badgeText}>
                             {isProtect ? "PROTECT" : "VERIFY"}
@@ -325,27 +325,55 @@ export default function History() {
 
                 {/* Images Container */}
                 <View style={styles.tamperImagesContainer}>
-                    {/* Original/Tampered Image */}
                     <View style={styles.tamperImageWrapper}>
                         <Text style={[styles.imageLabel, { color: t.labelText }]}>
                             {isProtect ? "Original Image" : "Tampered Image"}
                         </Text>
                         <Image
-                            source={{ uri: `${PYTHON_API_URL}${item.imageUrl}` }}
+                            source={{ uri: isProtect ? `${PYTHON_API_URL}${item.originalImageUrl}` : `${PYTHON_API_URL}${item.imageUrl}` }}
                             style={styles.tamperHistoryImage}
                             resizeMode="contain"
                             onError={(error) => console.log("Image loading error:", error.nativeEvent.error)}
                         />
+                        {tamperFilter == "verify" && (
+                            <View style={[
+                                styles.tamperStatusBadge,
+                                { backgroundColor: item.tampered ? '#FEE2E2' : '#D1FAE5' }
+                            ]}>
+                                {/* Left */}
+                                <View style={styles.tamperStatusRow}>
+                                    <Icon
+                                        name={item.tampered ? 'close-circle' : 'checkmark-circle'}
+                                        size={16}
+                                        color={item.tampered ? '#B91C1C' : '#047857'}
+                                    />
+                                    <Text style={[styles.tamperStatusText, { color: item.tampered ? '#B91C1C' : '#047857' }]}>
+                                        {item.tampered ? 'Tampered' : 'Authentic'}
+                                    </Text>
+                                </View>
+
+                                {/* Right */}
+                                <View style={styles.tamperStatusRow}>
+                                    <Icon
+                                        name={item.watermarkedMatched ? 'shield-checkmark' : 'shield-outline'}
+                                        size={16}
+                                        color={item.watermarkedMatched ? '#047857' : '#B91C1C'}
+                                    />
+                                    <Text style={[styles.tamperStatusText, { color: item.watermarkedMatched ? '#047857' : '#B91C1C' }]}>
+                                        {item.watermarkedMatched ? 'Matched' : 'Not Matched'}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
-                    
-                    {/* Result/Protected Image - Always show if available */}
-                    {item.resultImage && (
+
+                    {tamperFilter == "protect" && (
                         <View style={styles.tamperImageWrapper}>
                             <Text style={[styles.imageLabel, { color: t.labelText }]}>
                                 {isProtect ? "Protected Image" : "Extracted Image"}
                             </Text>
                             <Image
-                                source={{ uri: `${PYTHON_API_URL}${item.resultImage}` }}
+                                source={{ uri: `${PYTHON_API_URL}${item.protectedImageUrl}` }}
                                 style={styles.tamperHistoryImage}
                                 resizeMode="contain"
                                 onError={(error) => console.log("Result image loading error:", error.nativeEvent.error)}
@@ -356,7 +384,7 @@ export default function History() {
 
                 {/* Verification Result (for verify items) */}
                 {!isProtect && item.verificationResult && (
-                    <View style={[styles.verificationContainer, { 
+                    <View style={[styles.verificationContainer, {
                         backgroundColor: item.verificationResult.isValid ? '#0c710f20' : '#7e050520',
                         borderColor: item.verificationResult.isValid ? '#0c710f' : '#7e0505',
                         borderWidth: 1,
@@ -367,13 +395,13 @@ export default function History() {
                         alignItems: 'center',
                         gap: 8
                     }]}>
-                        <Ionicons 
-                            name={item.verificationResult.isValid ? "checkmark-circle" : "close-circle"} 
-                            size={20} 
-                            color={item.verificationResult.isValid ? "#0c710f" : "#7e0505"} 
+                        <Ionicons
+                            name={item.verificationResult.isValid ? "checkmark-circle" : "close-circle"}
+                            size={20}
+                            color={item.verificationResult.isValid ? "#0c710f" : "#7e0505"}
                         />
                         <View>
-                            <Text style={[styles.verificationText, { 
+                            <Text style={[styles.verificationText, {
                                 color: item.verificationResult.isValid ? "#0c710f" : "#7e0505",
                                 fontWeight: '600'
                             }]}>
@@ -390,7 +418,7 @@ export default function History() {
 
                 {/* Download button for result images */}
                 {item.resultImage && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.downloadButton, { position: 'relative', marginTop: 10, alignSelf: 'flex-end' }]}
                         onPress={() => {
                             // Add download functionality here
@@ -443,8 +471,8 @@ export default function History() {
 
                     {/* ===== DOWNLOAD ICON FOR FAKE ITEMS ===== */}
                     {hasDetectionResult && (
-                        <TouchableOpacity 
-                            style={[styles.downloadButton, { position: 'absolute', bottom:8,right:10 }]}
+                        <TouchableOpacity
+                            style={[styles.downloadButton, { position: 'absolute', bottom: 8, right: 10 }]}
                             onPress={() => downloadDetectionResult(item)}
                             disabled={downloadLoading[item._id]}
                         >
@@ -497,7 +525,7 @@ export default function History() {
 
         if (activeTab === "video") {
             const hasVideoDetection = item.detectionResult && item.detectionResult.resultVideo;
-            
+
             return (
                 <View style={[styles.historyCard, { backgroundColor: t.cardBg }]}>
                     <View style={styles.badgeContainer}>
@@ -517,7 +545,7 @@ export default function History() {
 
                     {/* Download button for fake videos */}
                     {hasVideoDetection && (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.downloadButton}
                             onPress={() => {
                                 Toast.show('Video download coming soon!');
@@ -576,25 +604,25 @@ export default function History() {
                 </View>
 
                 {/* Filter Button */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[
                         styles.filterButton,
                         { backgroundColor: t.tabContainerBg }
                     ]}
                     onPress={() => setShowFilterModal(true)}
                 >
-                    <Ionicons 
-                        name="filter" 
-                        size={20} 
-                        color={t.text} 
+                    <Ionicons
+                        name="filter"
+                        size={20}
+                        color={t.text}
                     />
                     <Text style={[styles.filterButtonText, { color: t.text }]}>
                         {getCurrentFilterLabel()}
                     </Text>
-                    <Ionicons 
-                        name="chevron-down" 
-                        size={16} 
-                        color={t.text} 
+                    <Ionicons
+                        name="chevron-down"
+                        size={16}
+                        color={t.text}
                     />
                 </TouchableOpacity>
             </View>
@@ -823,5 +851,23 @@ const styles = StyleSheet.create({
 
     verificationMessage: {
         fontSize: 12,
+    },
+    tamperStatusBadge: {
+        marginTop: 8,
+        padding: 8,
+        borderRadius: 8,
+        flexDirection: 'row',          // ✅ side by side
+        justifyContent: 'space-between', // ✅ left and right
+        alignItems: 'center',
+    },
+    tamperStatusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginVertical: 2,
+    },
+    tamperStatusText: {
+        fontSize: 13,
+        fontWeight: '600',
     },
 });

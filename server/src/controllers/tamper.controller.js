@@ -36,7 +36,7 @@ export const addDocumentToTamperProofHistory = asyncHandler(async(req,res)=>{
         imageUrl: image_url,
         watermarkedMatched: watermarked_matched,
         tampered: !watermarked_matched,
-        ownerId
+        owner: ownerId
     })
 
     res.status(201).json({
