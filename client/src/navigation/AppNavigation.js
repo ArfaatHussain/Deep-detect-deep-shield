@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import History from "../screens/History";
 import ProtectScreen from "../screens/ProtectScreen";
 import VerifyScreen from "../screens/VerifyScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -100,6 +101,7 @@ const AppNavigation = ({ darkTheme }) => {
                 <Stack.Screen name="VideoDetection" component={VideoDetection} />
                 <Stack.Screen name="ProtectScreen" component={ProtectScreen} />
                 <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

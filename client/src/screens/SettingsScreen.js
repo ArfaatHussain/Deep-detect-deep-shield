@@ -37,7 +37,6 @@ const SettingsScreen = ({ navigation }) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -372,6 +371,30 @@ const SettingsScreen = ({ navigation }) => {
     });
   };
 
+  /* ================= NAVIGATE TO PROFILE SCREEN ================= */
+  const navigateToProfile = () => {
+    navigation.navigate('Profile', {
+      user,
+      editMode,
+      editedFullName,
+      editedUsername,
+      editedEmail,
+      profileImage,
+      imageLoading,
+      loading,
+      onUpdateProfile: handleUpdateProfile,
+      onImagePicker: handleImagePicker,
+      onEditModeToggle: () => setEditMode(!editMode),
+      onCancelEdit: () => {
+        setEditMode(false);
+        loadUserData();
+      },
+      setEditedFullName,
+      setEditedUsername,
+      setEditedEmail,
+    });
+  };
+
   /* ================= RENDER SETTING ITEM ================= */
   const SettingItem = ({ icon, title, value, onPress, showArrow = true, danger = false }) => (
     <TouchableOpacity
@@ -402,10 +425,10 @@ const SettingsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Section */}
+        {/* Profile Section - Now navigates to separate Profile screen */}
         <TouchableOpacity
           style={[styles.profileSection, { backgroundColor: t.cardBg }]}
-          onPress={() => setProfileModalVisible(true)}
+          onPress={navigateToProfile}
           activeOpacity={0.7}
         >
           <View style={styles.profileImageContainer}>
@@ -781,222 +804,6 @@ const SettingsScreen = ({ navigation }) => {
             </ScrollView>
           </View>
         </View>
-      </Modal>
-
-      {/* Profile Management Modal */}
-      <Modal
-        visible={profileModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => {
-          setProfileModalVisible(false);
-          setEditMode(false);
-        }}
-      >
-        <KeyboardAvoidingView
-          style={[styles.centeredModalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <View style={[styles.centeredModalContent, { backgroundColor: t.background }]}>
-              {/* Modal Header */}
-              <View style={[styles.modalHeader, { borderBottomColor: t.modalBorder || t.border }]}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setProfileModalVisible(false);
-                    setEditMode(false);
-                  }}
-                  style={styles.closeButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Icon name="close" size={24} color={t.text} />
-                </TouchableOpacity>
-                <Text style={[styles.modalTitle, { color: t.titleColor || t.text }]}>
-                  {editMode ? 'Edit Profile' : 'Profile'}
-                </Text>
-                {!editMode ? (
-                  <TouchableOpacity onPress={() => setEditMode(true)} style={styles.editButton}>
-                    <Icon name="edit" size={24} color={t.iconColor} />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity onPress={handleUpdateProfile} disabled={loading} style={styles.editButton}>
-                    {loading ? (
-                      <ActivityIndicator size="small" color={t.iconColor} />
-                    ) : (
-                      <Icon name="check" size={24} color={t.iconColor} />
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.centeredScrollContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                <View style={styles.modalFields}>
-                  {/* Profile Image */}
-                  <View style={styles.profileImageWrapper}>
-                    <TouchableOpacity
-                      onPress={editMode ? handleImagePicker : null}
-                      disabled={!editMode || imageLoading}
-                      activeOpacity={0.7}
-                      style={styles.profileImageTouchable}
-                    >
-                      {imageLoading ? (
-                        <View style={[styles.profileImagePlaceholderLarge, { backgroundColor: t.cardBg }]}>
-                          <ActivityIndicator size="large" color={t.button || '#2563EB'} />
-                        </View>
-                      ) : profileImage ? (
-                        <Image source={{ uri: profileImage }} style={styles.profileImageLarge} />
-                      ) : (
-                        <View style={[styles.profileImagePlaceholderLarge, { backgroundColor: t.button || '#2563EB' }]}>
-                          <Text style={styles.profileImageLargeText}>
-                            {editedFullName?.charAt(0).toUpperCase() || 'U'}
-                          </Text>
-                        </View>
-                      )}
-                      {editMode && !imageLoading && (
-                        <View style={[styles.profileCameraBadge, { backgroundColor: t.success || '#4CAF50' }]}>
-                          <Icon name="camera-alt" size={18} color="#FFF" />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Full Name Field */}
-                  <View style={styles.modalField}>
-                    <Text style={[styles.modalFieldLabel, { color: t.labelText || t.textSecondary }]}>
-                      <Icon name="person" size={16} color={t.iconColor} /> Full Name
-                    </Text>
-                    {editMode ? (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                        <Icon name="person" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <TextInput
-                          style={[styles.input, { color: t.text }]}
-                          value={editedFullName}
-                          onChangeText={setEditedFullName}
-                          placeholder="Enter your full name"
-                          placeholderTextColor={t.placeholder || t.textSecondary}
-                        />
-                      </View>
-                    ) : (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border, backgroundColor: 'transparent' }]}>
-                        <Icon name="person" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <Text style={[styles.input, { color: t.text, textAlignVertical: 'center', paddingVertical: 12 }]}>
-                          {editedFullName}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Username Field */}
-                  <View style={styles.modalField}>
-                    <Text style={[styles.modalFieldLabel, { color: t.labelText || t.textSecondary }]}>
-                      <Icon name="alternate-email" size={16} color={t.iconColor} /> Username
-                    </Text>
-                    {editMode ? (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                        <Icon name="alternate-email" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <TextInput
-                          style={[styles.input, { color: t.text }]}
-                          value={editedUsername}
-                          onChangeText={setEditedUsername}
-                          placeholder="username"
-                          placeholderTextColor={t.placeholder || t.textSecondary}
-                          autoCapitalize="none"
-                        />
-                      </View>
-                    ) : (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border, backgroundColor: 'transparent' }]}>
-                        <Icon name="alternate-email" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <Text style={[styles.input, { color: t.text, textAlignVertical: 'center', paddingVertical: 12 }]}>
-                          @{editedUsername}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Email Field */}
-                  <View style={styles.modalField}>
-                    <Text style={[styles.modalFieldLabel, { color: t.labelText || t.textSecondary }]}>
-                      <Icon name="email" size={16} color={t.iconColor} /> Email
-                    </Text>
-                    {editMode ? (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                        <Icon name="email" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <TextInput
-                          style={[styles.input, { color: t.text }]}
-                          value={editedEmail}
-                          onChangeText={setEditedEmail}
-                          placeholder="Enter your email"
-                          placeholderTextColor={t.placeholder || t.textSecondary}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                        />
-                      </View>
-                    ) : (
-                      <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border, backgroundColor: 'transparent' }]}>
-                        <Icon name="email" size={20} color={t.iconColor} style={styles.inputIcon} />
-                        <Text style={[styles.input, { color: t.text, textAlignVertical: 'center', paddingVertical: 12 }]}>
-                          {editedEmail}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Member Info */}
-                  {!editMode && user && (
-                    <View style={[styles.memberCard, { backgroundColor: t.cardBg }]}>
-                      <Icon name="info" size={20} color={t.iconColor} />
-                      <Text style={[styles.memberText, { color: t.descriptionText || t.textSecondary }]}>
-                        Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Action Buttons for Edit Mode */}
-                  {editMode && (
-                    <View style={styles.editActionsContainer}>
-                      <TouchableOpacity
-                        style={[styles.cancelEditButton, { 
-                          borderColor: t.inputBorder || t.border,
-                          backgroundColor: t.logoutBtnBg || '#33363a'
-                        }]}
-                        onPress={() => {
-                          setEditMode(false);
-                          loadUserData();
-                        }}
-                      >
-                        <Text style={[styles.cancelEditButtonText, { color: '#FFF' }]}>
-                          Cancel
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.saveEditButton,
-                          loading && styles.updateButtonDisabled,
-                          { backgroundColor: t.button || '#2563EB' }
-                        ]}
-                        onPress={handleUpdateProfile}
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <ActivityIndicator size="small" color="#FFF" />
-                        ) : (
-                          <>
-                            <Text style={styles.saveEditButtonText}>Save</Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
       </Modal>
 
       {/* Password Change Modal */}
