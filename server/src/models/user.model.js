@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken"
 import { Image } from "./image.model.js";
 import { Video } from "./video.model.js";
+import { TamperProof } from "./tamper-proof.model.js";
+import { TamperProofHistory } from "./tamper-proof-history.model.js";
 
 const userSchema = mongoose.Schema({
     email: {
@@ -68,6 +70,14 @@ userSchema.pre("remove",async function (next){
     })
 
     await Video.deleteMany({
+        owner: this._id
+    })
+
+    await TamperProof.deleteMany({
+        owner: this._id
+    })
+
+    await TamperProofHistory.deleteMany({
         owner: this._id
     })
 
