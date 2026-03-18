@@ -1,47 +1,37 @@
 import { v2 as cloudinary } from 'cloudinary';
-import fs from 'fs';
+import fs from "fs/promises";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadFileOnCloudinary = async (file) => {
+export const uploadToCloudinary = async (filePath) => {
     try {
-        if (!file) return null;
-
-        let response;
-
-        if (Buffer.isBuffer(file)) {
-
-            response = await new Promise((resolve, reject) => {
-                const stream = cloudinary.uploader.upload_stream(
-                    { resource_type: "auto" },
-                    (error, result) => {
-                        if (error) {
-                            console.error("Error uploading to Cloudinary:", error);
-                            return reject(error);
-                        }
-                        console.log("File uploaded to Cloudinary successfully. URL:", result.url);
-                        resolve(result);  
-                    }
-                );
-
-                stream.end(file);
-            });
-
-        } else if (typeof file === 'string') {
-            response = await cloudinary.uploader.upload(file, { resource_type: "auto" });
-            console.log("File uploaded to Cloudinary successfully. URL:", response.url);
+        if (!filePath) {
+            throw new Error("File path is required.");
         }
 
-        return response;   
+        console.log("Uploading file ",filePath)
+        const result = await cloudinary.uploader.upload(filePath, {
+            resource_type: "auto",
+            folder: "my-app/uploads",
+        });
+        console.log("file ",filePath," uploaded...")
 
+        await fs.unlink(filePath);
+
+        return result;
     } catch (error) {
-        console.error("Error uploading file to Cloudinary:", error);
-        return null;
+        console.error("Cloudinary Upload Error:", error.message);
+
+        try {
+            if (filePath) await fs.unlink(filePath);
+        } catch (err) {
+            console.warn("File deletion failed:", err.message);
+        }
+
+        throw error;
     }
 };
-
-export { uploadFileOnCloudinary };

@@ -7,69 +7,64 @@ import mongoose from 'mongoose';
 import { User } from '../models/user.model.js';
 import fs from 'fs';
 import path from "path";
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 const detectImageForDeepfake = asyncHandler(async (req, res) => {
-    const { owner } = req.body
-    if (!owner) {
-        throw new ApiError("Provide owner id", 400)
-    }
-    if (!mongoose.Types.ObjectId.isValid(owner)) {
-        throw new ApiError("ID is not in valid format", 400)
-    }
+    const { owner } = req.body;
 
-    const user = await User.findById(owner)
+    // 1. Validate all inputs FIRST before any async work
+    if (!owner) throw new ApiError("Provide owner id", 400);
+    if (!mongoose.Types.ObjectId.isValid(owner)) throw new ApiError("ID is not in valid format", 400);
+    if (!req.file) throw new ApiError("Provide image", 400);
 
-    if (!user) {
-        throw new ApiError("User not found", 404)
-    }
-
-    if (!req.file) {
-        throw new ApiError("Provide image", 400)
-    }
-
-    const pythonAPIUrl = `${process.env.PYTHON_APP_URL}/predict`;
-
+    // 2. Run user check + Python API call in parallel (independent operations)
     const formData = new FormData();
     formData.append('file', fs.createReadStream(req.file.path));
 
-    const response = await axios.post(pythonAPIUrl, formData, {
-        headers: {
-            ...formData.getHeaders(),
-        },
-    });
+    const [user, response] = await Promise.all([
+        User.findById(owner).lean().select('_id'),  // lean() + select() = faster query
+        axios.post(`${process.env.PYTHON_APP_URL}/predict`, formData, {
+            headers: { ...formData.getHeaders() },
+            timeout: 15000, // prevent hanging requests
+        })
+    ]);
+
+    if (!user) throw new ApiError("User not found", 404);
 
     const predictionResult = response.data;
+    const isFake = predictionResult.class === "Fake Image";
 
-    let resultImage;
-    if (predictionResult.class == "Fake Image") {
+    // 3. Upload both images in parallel (was sequential before)
+    const uploadTasks = [uploadToCloudinary(req.file.path)];
+
+    if (isFake) {
         const pythonImagePath = path.join("..", "python-server", predictionResult.highlightedImage);
-
-        const filename = `result-${Date.now()}${path.extname(pythonImagePath)}`;
-        const localPath = path.join("uploads", filename);
-
-        fs.copyFileSync(pythonImagePath, localPath);
-        fs.unlinkSync(pythonImagePath);
-        resultImage = `/${localPath.replace(/\\/g, "/")}`;
+        uploadTasks.push(uploadToCloudinary(pythonImagePath));
     }
 
-    const uploadedImageUrl = `/${req.file.path.replace(/\\/g, "/")}`;
-    await Image.create({
+    const uploadResults = await Promise.all(uploadTasks);
+    const uploadedImageUrl = uploadResults[0].secure_url;
+    const pythonImageUrl = isFake ? uploadResults[1].secure_url : undefined;
+
+    // 4. Send response immediately, save to DB in background
+    res.status(200).json({
+        class: predictionResult.class,
+        confidenceScore: predictionResult.confidence_score,
+        explanation: predictionResult.explanation,
+        resultImage: pythonImageUrl,
+    });
+
+    // 5. Non-blocking DB write — client doesn't need to wait for this
+    Image.create({
         owner,
         imageUrl: uploadedImageUrl,
         detectionResult: {
             explanation: predictionResult.explanation,
             class: predictionResult.class,
-            resultImage,
-            confidenceScore: predictionResult.confidence_score
+            resultImage: pythonImageUrl,
+            confidenceScore: predictionResult.confidence_score,
         }
-    })
-
-    res.status(200).json({
-        class: predictionResult.class,
-        confidenceScore: predictionResult.confidence_score,
-        explanation: predictionResult.explanation,
-        resultImage
-    })
+    }).catch(err => console.error("DB save failed:", err)); // handle silently
 });
 
 export { detectImageForDeepfake };

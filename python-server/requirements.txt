@@ -15,3 +15,5 @@ grad-cam
 stegano
 requests
 face-alignment
+cloudinary
+python-dotenv

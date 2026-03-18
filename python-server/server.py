@@ -18,6 +18,9 @@ from werkzeug.utils import secure_filename
 from stegano import lsb
 import requests
 from video_model import DeepfakeVideoDetector
+from deepfake_xai import ExplainableDeepfakeDetector
+from helpers import _build_explanation_text, _build_region_analysis, _encode_frames, upload_to_cloudinary
+from concurrent.futures import ThreadPoolExecutor
 # -----------------------------
 # 📦 Setup and Model Loading
 # -----------------------------
@@ -47,8 +50,8 @@ WATERMARK="protected"
 #    Video Model Config
 
 MODEL_PATH = "trained_models/deepfake-video-detection.pth"
-detector = DeepfakeVideoDetector(MODEL_PATH)
-
+# detector = DeepfakeVideoDetector(MODEL_PATH)
+detector = ExplainableDeepfakeDetector(MODEL_PATH)
 
 # -------------------------------
 
@@ -150,6 +153,18 @@ def predict():
  
 UPLOAD_DIR = "uploads"
 
+
+def send_to_backend(data, endpoint="addDocumentToTamperProof"):
+    try:
+        requests.post(
+            "http://localhost:5000/tamper/"+endpoint,
+            json=data,
+            timeout=5
+        )
+    except Exception as e:
+        print("Backend request failed:", e)
+
+from threading import Thread
 @app.route("/protect", methods=["POST"])
 def embed_watermark():
     if "image" not in request.files:
@@ -157,47 +172,53 @@ def embed_watermark():
 
     file = request.files["image"]
     owner = request.form.get("owner")
+
     if not owner:
-        return jsonify({"error": "provide owner id"})
+        return jsonify({"error": "provide owner id"}), 400
 
     os.makedirs("uploads", exist_ok=True)
 
-    # Save original first
+    # Save original
     original_filename = f"uploads/original-{uuid.uuid4().hex}.png"
     file.save(original_filename)
 
+    # Apply watermark
     stego_image = lsb.hide(original_filename, WATERMARK)
 
     protected_filename = f"uploads/protected-{uuid.uuid4().hex}.png"
     stego_image.save(protected_filename)
 
+    # 🚀 Parallel uploads
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_original = executor.submit(upload_to_cloudinary, original_filename)
+        future_protected = executor.submit(upload_to_cloudinary, protected_filename)
+
+        original_upload = future_original.result()
+        protected_upload = future_protected.result()
+
     data_to_send = {
-        "original_image_url": f"/{original_filename}",
-        "protected_image_url": f"/{protected_filename}",
+        "original_image_url": original_upload["secure_url"],
+        "protected_image_url": protected_upload["secure_url"],
         "owner": owner
     }
 
-    response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProof", json=data_to_send)
-
-    try:
-        backend_response = response.json()
-    except ValueError:
-        backend_response = response.text
+    Thread(target=send_to_backend, args=(data_to_send,)).start()
 
     return jsonify({
-        "status": response.status_code,
-        "backend_response": backend_response
-    }), response.status_code
+        "message": "success",
+        "data": data_to_send
+    }), 200
 
 
 @app.route("/verify", methods=["POST"])
 def extract_watermark():
 
     if "image" not in request.files:
-        return jsonify({"extracted_watermark": None, "error": "Missing image"}), 400
+        return jsonify({"error": "Missing image"}), 400
 
     file = request.files["image"]
     owner = request.form.get("owner")
+
     if not owner:
         return jsonify({"error": "provide owner id"}), 400
 
@@ -206,58 +227,124 @@ def extract_watermark():
     provided_image = f"uploads/provided-{uuid.uuid4().hex}.png"
     file.save(provided_image)
 
-    extracted = ""
     watermark_matched = False
 
     try:
+        # Extract watermark
         extracted = lsb.reveal(provided_image)
-        if extracted and extracted == "protected":
+        if extracted == "protected":
             watermark_matched = True
 
     except Exception as e:
-        print("Error: ", e)
-        extracted = ""  # fallback on error
+        print("Error:", e)
 
-    # ✅ This always runs, whether or not an exception occurred
-    data_to_send = {
-        "image_url": f"/{provided_image}",
-        "watermarked_matched": watermark_matched,
-        "owner": owner
-    }
+    upload_result = upload_to_cloudinary(provided_image)
+    uploaded_url = upload_result["secure_url"]
+    print("Uploaded image url: ",uploaded_url)
+        # Always delete local file
+    if os.path.exists(provided_image):
+        os.remove(provided_image)
 
-    response = requests.post("http://localhost:5000/tamper/addDocumentToTamperProofHistory", json=data_to_send)
+    # Send to backend only if upload succeeded
+    if uploaded_url:
+        data_to_send = {
+            "image_url": uploaded_url,
+            "watermarked_matched": watermark_matched,
+            "owner": owner
+        }
 
-    try:
-        backend_response = response.json()
-    except ValueError:
-        backend_response = response.text
+        Thread(
+            target=send_to_backend,
+            args=(data_to_send, "addDocumentToTamperProofHistory")
+        ).start()
 
     return jsonify({
-        "status": response.status_code,
-        "backend_response": backend_response
-    }), response.status_code
+        "message": "success",
+        "image_url": uploaded_url,
+        "watermark_matched": watermark_matched
+    }), 200
 
 @app.route("/predict-video", methods=["POST"])
 def predict_video():
-
+ 
     if "video" not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
-
+ 
     file = request.files["video"]
-
-    video_path = os.path.join(UPLOAD_DIR, file.filename)
-
+ 
+    # ── Use a UUID filename to avoid collisions under concurrent requests ──────
+    ext        = os.path.splitext(file.filename)[-1] or ".mp4"
+    safe_name  = f"{uuid.uuid4().hex}{ext}"
+    video_path = os.path.join(UPLOAD_DIR, safe_name)
     file.save(video_path)
-
-    label, prob = detector.predict(video_path)
-
-    os.remove(video_path)
-
-    return jsonify({
-        "prediction": label,
-        "confidence": float(prob)
-    })
-
+ 
+    # ── Choose explanation depth from optional query param ────────────────────
+    # GET /predict-video?explain=full   → annotated frame images included
+    # GET /predict-video?explain=lite   → scores only, no images  (default)
+    # GET /predict-video?explain=none   → behaves like the original endpoint
+    explain_mode = request.args.get("explain", "lite").lower()
+ 
+    # ── Optional: save XAI report to disk (omit if you don't need it) ─────────
+    xai_dir = os.path.join(UPLOAD_DIR, f"xai_{safe_name}")
+ 
+    try:
+        if explain_mode == "none":
+            # ── Original behaviour ────────────────────────────────────────────
+            label, prob = detector.predict(video_path)
+            return jsonify({
+                "prediction": label,
+                "confidence": round(float(prob), 4),
+            })
+ 
+        # ── XAI path ──────────────────────────────────────────────────────────
+        label, prob, explanation = detector.predict_with_explanation(video_path)
+ 
+        # ── Build response ────────────────────────────────────────────────────
+        response = {
+            "prediction": label,
+            "confidence": round(float(prob), 4),
+ 
+            # Per-frame breakdown
+            "frame_analysis": [
+                {
+                    "frame":           int(i + 1),
+                    "fakeness_score":  round(float(explanation.frame_scores[i]), 4),
+                    "attention_weight": round(float(explanation.frame_attention[i]), 4),
+                }
+                for i in range(len(explanation.frame_scores))
+            ],
+ 
+            # Which frames are most suspicious (1-indexed for readability)
+            "top_suspicious_frames": [int(f + 1) for f in explanation.top_fake_frames],
+ 
+            # Per-region (POI) mean activation across all frames
+            "region_analysis": _build_region_analysis(explanation),
+ 
+            # Plain-text explanation paragraph
+            "explanation_text": _build_explanation_text(label, prob, explanation),
+        }
+ 
+        # ── Include base64 annotated frames only in "full" mode ───────────────
+        if explain_mode == "full":
+            response["annotated_frames"] = _encode_frames(explanation)
+ 
+        # ── Optionally persist the report ─────────────────────────────────────
+        explanation.save_report(xai_dir)
+ 
+        return jsonify(response)
+ 
+    except Exception as e:
+        app.logger.exception("Prediction failed")
+        return jsonify({"error": str(e)}), 500
+ 
+    finally:
+        # Always clean up uploaded video
+        if os.path.exists(video_path):
+            os.remove(video_path)
+        # Clean up XAI report dir if it was created but not needed
+        if explain_mode == "none" and os.path.exists(xai_dir):
+            shutil.rmtree(xai_dir, ignore_errors=True)
+ 
 
 # -----------------------------
 # 🖥️ Run Server

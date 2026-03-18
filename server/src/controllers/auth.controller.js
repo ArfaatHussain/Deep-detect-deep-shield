@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadFileOnCloudinary } from "../utils/cloudinary.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 import bcrypt from "bcrypt"
 
 const register = asyncHandler(
@@ -41,8 +41,8 @@ const register = asyncHandler(
             fullName
         }
         if (req.file) {
-            const response = await uploadFileOnCloudinary(req.file.buffer);
-            console.log("Response URL from cloudinary: ", response.url)
+            const response = await uploadToCloudinary(req.file.path);
+            console.log("Response URL from cloudinary: ", response.secure_url)
             fieldsToAdd.avatar = response.url;
         }
 
