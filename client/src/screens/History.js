@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useContext } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, Modal, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -8,9 +8,9 @@ import { getHistory } from "../service/userService";
 import { loadUser } from "../utils/loadUser";
 import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
-import { API_URL, PYTHON_API_URL } from "../../config";
 import Toast from 'react-native-simple-toast';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Video from 'react-native-video';
 
 export default function History() {
     const [activeTab, setActiveTab] = useState("image");
@@ -176,10 +176,13 @@ export default function History() {
         return filteredTamperHistory;
     };
 
-    // Download function for detection result images
+    // Download function for detection result images & videos
     const downloadDetectionResult = async (item) => {
-        if (!item?.detectionResult?.resultImage) {
-            Toast.show("No detection result image available");
+        const imageUrl = item?.detectionResult?.resultImage;
+        const videoUrl = item?.detectionResult?.resultVideo;
+
+        if (!imageUrl && !videoUrl) {
+            Toast.show("No media available to download");
             return;
         }
 
@@ -189,28 +192,31 @@ export default function History() {
             // Request permission
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== "granted") {
-                Toast.show("Please allow media access to download images.");
+                Toast.show("Please allow media access to download.");
                 return;
             }
 
-            // Build file name
-            const photoUrl = item.detectionResult.resultImage;
-            const fileName = photoUrl.replace(/^.*[\\/]/, '');
+            // Decide which file to download
+            const mediaUrl = videoUrl || imageUrl;
+
+            // Extract filename (Cloudinary URLs usually already have extension)
+            const fileName = mediaUrl.split('/').pop();
             const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
-            // Download image
+            // Download file
             const { uri } = await FileSystem.downloadAsync(
-                `${API_URL}${photoUrl}`,
+                `${mediaUrl}`,
                 fileUri
             );
 
             // Save to gallery
             await MediaLibrary.createAssetAsync(uri);
 
-            Toast.show("Image saved to gallery");
+            Toast.show(videoUrl ? "Video saved to gallery" : "Image saved to gallery");
+
         } catch (error) {
             console.error("Download error:", error);
-            Toast.show("Failed to download image");
+            Toast.show("Failed to download media");
         } finally {
             setDownloadLoading(prev => ({ ...prev, [item._id]: false }));
         }
@@ -278,12 +284,6 @@ export default function History() {
         );
     };
 
-    function getUrl() {
-        if (activeTab === "image") return API_URL;
-        if (activeTab === "video") return API_URL;
-        return PYTHON_API_URL;
-    }
-
     const renderTamperItem = ({ item }) => {
         const isProtect = tamperGenerationHistory.some(genItem => genItem._id === item._id);
 
@@ -330,7 +330,7 @@ export default function History() {
                             {isProtect ? "Original Image" : "Tampered Image"}
                         </Text>
                         <Image
-                            source={{ uri: isProtect ? `${PYTHON_API_URL}${item.originalImageUrl}` : `${PYTHON_API_URL}${item.imageUrl}` }}
+                            source={{ uri: `${item.originalImageUrl}`}}
                             style={styles.tamperHistoryImage}
                             resizeMode="contain"
                             onError={(error) => console.log("Image loading error:", error.nativeEvent.error)}
@@ -373,7 +373,7 @@ export default function History() {
                                 {isProtect ? "Protected Image" : "Extracted Image"}
                             </Text>
                             <Image
-                                source={{ uri: `${PYTHON_API_URL}${item.protectedImageUrl}` }}
+                                source={{ uri: `${item.protectedImageUrl}` }}
                                 style={styles.tamperHistoryImage}
                                 resizeMode="contain"
                                 onError={(error) => console.log("Result image loading error:", error.nativeEvent.error)}
@@ -492,7 +492,7 @@ export default function History() {
                                     Original Image
                                 </Text>
                                 <Image
-                                    source={{ uri: `${getUrl()}${item.imageUrl}` }}
+                                    source={{ uri: `${item.imageUrl}` }}
                                     style={styles.historyImage}
                                 />
                             </View>
@@ -502,14 +502,14 @@ export default function History() {
                                     Detection Result
                                 </Text>
                                 <Image
-                                    source={{ uri: `${API_URL}${item.detectionResult.resultImage}` }}
+                                    source={{ uri: `${item.detectionResult.resultImage}` }}
                                     style={styles.historyImage}
                                 />
                             </View>
                         </View>
                     ) : (
                         <Image
-                            source={{ uri: `${getUrl()}${item.imageUrl}` }}
+                            source={{ uri: `${item.imageUrl}` }}
                             style={[styles.historyImage, { width: '100%' }]}
                         />
                     )}
@@ -524,38 +524,79 @@ export default function History() {
         }
 
         if (activeTab === "video") {
-            const hasVideoDetection = item.detectionResult && item.detectionResult.resultVideo;
+            const hasVideoDetection = item.detectionResult &&
+                Object.keys(item.detectionResult).length > 0 &&
+                item.detectionResult.resultVideo;
 
             return (
-                <View style={[styles.historyCard, { backgroundColor: t.cardBg }]}>
-                    <View style={styles.badgeContainer}>
-                        <View
-                            style={[
-                                styles.badge,
-                                {
-                                    backgroundColor: hasVideoDetection ? "#7e0505" : "#0c710f"
-                                },
-                            ]}
-                        >
-                            <Text style={styles.badgeText}>
-                                {hasVideoDetection ? "FAKE" : "REAL"}
-                            </Text>
-                        </View>
-                    </View>
+                <View
+                    style={[
+                        styles.historyCard,
+                        {
+                            backgroundColor: t.cardBg,
+                            shadowOpacity: t.cardShadowOpacity,
+                        },
+                    ]}
+                >
 
-                    {/* Download button for fake videos */}
+                    {/* ===== DOWNLOAD ICON FOR FAKE VIDEOS ===== */}
                     {hasVideoDetection && (
                         <TouchableOpacity
-                            style={styles.downloadButton}
-                            onPress={() => {
-                                Toast.show('Video download coming soon!');
-                            }}
+                            style={[styles.downloadButton, { position: 'absolute', bottom: 8, right: 10 }]}
+                            onPress={() => downloadDetectionResult(item)}
+                            disabled={downloadLoading[item._id]}
                         >
-                            <Ionicons name="download-outline" size={20} color="#fff" />
+                            {downloadLoading[item._id] ? (
+                                <Ionicons name="sync" size={24} color="#fff" />
+                            ) : (
+                                <Ionicons name="download-outline" size={24} color="#fff" />
+                            )}
                         </TouchableOpacity>
                     )}
 
-                    <Text style={{ color: t.text }}>Video module history</Text>
+                    {/* ===== VIDEO CONTENT ===== */}
+                    {hasVideoDetection ? (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={[styles.videoLabel, { color: t.labelText }]}>
+                                    Original Video
+                                </Text>
+                                <Video
+                                    source={{ uri: `${item.videoUrl}` }}
+                                    style={styles.historyVideo}
+                                    controls={true}
+                                    paused={true}
+                                />
+                            </View>
+
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={[styles.videoLabel, { color: t.labelText }]}>
+                                    Detection Result
+                                </Text>
+                                <Video
+                                    source={{ uri: `${item.detectionResult.resultVideo}` }}
+                                    style={styles.historyVideo}
+                                    controls={true}
+                                    paused={true}
+                                />
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={styles.singleVideoContainer}>
+                            <Video
+                                source={{ uri: `${item.videoUrl}` }}
+                                style={[styles.historyVideo]}
+                                controls={true}
+                                paused={true}
+                            />
+                        </View>
+                    )}
+
+                    {!!item.detectionResult?.explanation && (
+                        <Text style={[styles.explanationText, { color: t.descriptionText }]}>
+                            {item.detectionResult.explanation}
+                        </Text>
+                    )}
                 </View>
             );
         }
@@ -798,9 +839,9 @@ const styles = StyleSheet.create({
     // Download button styles
     downloadButton: {
         backgroundColor: "#2563EB",
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 40,
+        height: 40,
+        borderRadius: 28,
         justifyContent: "center",
         alignItems: "center",
         elevation: 5,
@@ -869,5 +910,21 @@ const styles = StyleSheet.create({
     tamperStatusText: {
         fontSize: 13,
         fontWeight: '600',
+    },
+    videoLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginBottom: 6,
+        textAlign: 'center',
+    },
+    historyVideo: {
+        width: '100%',
+        height: 150,
+        borderRadius: 8,
+        backgroundColor: '#000',
+    },
+    singleVideoContainer: {
+        position: 'relative',
+        width: '100%',
     },
 });

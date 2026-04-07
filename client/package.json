@@ -43,7 +43,7 @@
     "react-native-simple-toast": "^3.3.2",
     "react-native-svg": "^15.12.1",
     "react-native-vector-icons": "^10.0.0",
-    "react-native-video": "^6.17.0",
+    "react-native-video": "^6.19.1",
     "simple-toast": "^0.0.0"
   },
   "private": true,

@@ -37,20 +37,32 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-video",
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true,
-          "granularPermissions": [
-            "photo",
-            "video"
-          ]
-        }
+  "expo-video",
+  [
+    "expo-media-library",
+    {
+      "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+      "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+      "isAccessMediaLocationEnabled": true,
+      "granularPermissions": [
+        "photo",
+        "video"
       ]
-    ],
+    }
+  ],
+  [
+    "react-native-video",
+    {
+      "enableNotificationControls": true,
+      "androidExtensions": {
+        "useExoplayerRtsp": false,
+        "useExoplayerSmoothStreaming": false,
+        "useExoplayerHls": false,
+        "useExoplayerDash": false
+      }
+    }
+  ]
+],
     "extra": {
       "eas": {
         "projectId": "63d51c75-8562-4b11-9936-3ee4abf2bc0a"
