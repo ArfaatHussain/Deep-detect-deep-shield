@@ -156,10 +156,10 @@ def predict():
 UPLOAD_DIR = "uploads"
 
 
-def send_to_backend(data, endpoint="addDocumentToTamperProof"):
+def send_to_backend(data, endpoint="/tamper/addDocumentToTamperProof"):
     try:
         requests.post(
-            "http://localhost:5000/tamper/"+endpoint,
+            "http://localhost:5000/"+endpoint,
             json=data,
             timeout=5
         )
@@ -266,6 +266,7 @@ def extract_watermark():
         "watermark_matched": watermark_matched
     }), 200
 
+
 @app.route("/predict-video", methods=["POST"])
 def predict_video():
 
@@ -273,10 +274,18 @@ def predict_video():
         return jsonify({"error": "No video uploaded"}), 400
 
     file = request.files["video"]
+    owner = request.form.get("owner")
 
     ext        = os.path.splitext(file.filename)[-1] or ".mp4"
     safe_name  = f"{uuid.uuid4().hex}{ext}"
     video_path = os.path.join(UPLOAD_DIR, safe_name)
+    file.save(video_path)
+
+    # ── Upload original video to Cloudinary immediately after saving ──────────
+    original_upload  = upload_to_cloudinary(video_path, folder="deepfake-xai/uploads")
+    original_video_url = original_upload.get("secure_url", "")
+    # Note: upload_to_cloudinary deletes the local file, so re-save for prediction
+    file.seek(0)
     file.save(video_path)
 
     xai_dir = os.path.join(UPLOAD_DIR, f"xai_{safe_name}")
@@ -284,33 +293,65 @@ def predict_video():
 
     try:
         label, prob, explanation = detector.predict_with_explanation(video_path)
-
         # ── REAL video — return early, no XAI ────────────────────────────────
         if label != "FAKE" or explanation is None:
+            request_data = {
+                "original_video_url": original_video_url,
+                "prediction": label,
+                "probability": round(float(prob), 4),
+                "explanation": "The video appears authentic. No manipulation detected.",
+                "owner": owner
+                }
+            
+            send_to_backend(request_data, endpoint="/video/save-result")
+
+
             return jsonify({
-                "prediction":  label,
-                "confidence":  round(float(prob), 4),
-                "explanation": "The video appears authentic. No manipulation detected."
+                "prediction":    label,
+                "probability":    round(float(prob), 4),
+                "explanation":   "The video appears authentic. No manipulation detected.",
+                "original_video_url": original_video_url,
             })
 
-        # ── FAKE video ────────────────────────────────────────────────────────
-        explanation.save_report(xai_dir)  # generates video, populates video_url
+        # ── FAKE video — generate annotated video ────────────────────────────
+        explanation.save_report(xai_dir)
+
+        # ── Upload annotated video to Cloudinary ──────────────────────────────
+        annotated_video_path = os.path.join(xai_dir, "annotated_video.mp4")
+        cloudinary_result    = upload_to_cloudinary(
+            annotated_video_path,
+            folder="deepfake-xai/results"
+        )
+        annotated_video_url = cloudinary_result.get("secure_url", "")
+
+        request_data = {
+            "original_video_url": original_video_url,
+            "annotated_video_url": annotated_video_url,
+            "prediction": label,
+            "probability": round(float(prob), 4),
+            "explanation_text": _build_explanation_text(label, prob, explanation),
+            "owner": owner
+        }
+        send_to_backend(request_data, endpoint="/video/save-result")
 
         return jsonify({
-            "prediction":       label,
-            "confidence":       round(float(prob), 4),
-            "explanation_text": _build_explanation_text(label, prob, explanation),
-            "video_url":        explanation.video_url,
+            "prediction":            label,
+            "probability":            round(float(prob), 4),
+            "explanation_text":      _build_explanation_text(label, prob, explanation),
+            "original_video_url":    original_video_url,   # ← uploaded input video
+            "annotated_video_url":   annotated_video_url,  # ← XAI output video
         })
 
     except Exception as e:
         app.logger.exception("Prediction failed")
+        return jsonify({"error": str(e)}), 500
+
+    finally:
         if os.path.exists(video_path):
             os.remove(video_path)
-        # Remove XAI dir only if video was REAL (no output needed)
-        if os.path.exists(xai_dir) and locals().get("label") != "FAKE":
-            shutil.rmtree(xai_dir, ignore_errors=True)   
-        return jsonify({"error": str(e)}), 500
+        if os.path.exists(xai_dir):
+            shutil.rmtree(xai_dir, ignore_errors=True)
+
 
 # -----------------------------
 # 🖥️ Run Server

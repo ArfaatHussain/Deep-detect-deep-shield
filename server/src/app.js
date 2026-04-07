@@ -18,11 +18,14 @@ import { authRouter } from "./routes/auth.route.js"
 import userRouter from "./routes/user.route.js"
 import imageRouter from "./routes/image.route.js"
 import tamperRouter from "./routes/tamper.route.js"
+import videoRouter from "./routes/video.route.js"
 
 app.use("/auth",authRouter)
 app.use("/user",userRouter)
 app.use("/image",imageRouter)
 app.use("/tamper",tamperRouter)
+app.use("/video",videoRouter)
+
 
 
 
