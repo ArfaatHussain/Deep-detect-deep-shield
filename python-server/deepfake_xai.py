@@ -144,8 +144,9 @@ class DeepfakeExplanation:
     frame_attention:   np.ndarray                          # [T]  attention weights
     poi_heatmaps:      Dict[int, Dict[str, np.ndarray]]    # frame_idx → {poi_name: heatmap}
     poi_names:         List[str]
-    annotated_frames:  List[np.ndarray] = field(default_factory=list)  # BGR, 224×(224*N_POI)
+    annotated_frames:  List[np.ndarray] = field(default_factory=list)  # only top 5 now
     top_fake_frames:   List[int]        = field(default_factory=list)
+    frame_urls:        List[str]        = field(default_factory=list)  # ← NEW: served URLs
 
     # ── textual summary ───────────────────────────────────────────────────────
     def text_summary(self) -> str:
@@ -179,26 +180,28 @@ class DeepfakeExplanation:
 
     # ── save report ──────────────────────────────────────────────────────────
     def save_report(self, output_dir: str = "xai_output"):
-        os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
 
-        # Text summary
-        with open(os.path.join(output_dir, "summary.txt"), "w", encoding="utf-8") as f:
-            f.write(self.text_summary())
+            with open(os.path.join(output_dir, "summary.txt"), "w", encoding="utf-8") as f:
+                f.write(self.text_summary())
 
-        # Annotated frame images
-        for i, img in enumerate(self.annotated_frames):
-            cv2.imwrite(os.path.join(output_dir, f"frame_{i+1:03d}.jpg"), img)
+            # ── Save only top 5 annotated frames (indices stored in top_fake_frames) ──
+            self.frame_urls.clear()
+            for rank, (frame_idx, img) in enumerate(zip(self.top_fake_frames, self.annotated_frames)):
+                filename = f"frame_{frame_idx + 1:03d}_rank{rank + 1}.jpg"
+                filepath = os.path.join(output_dir, filename)
+                cv2.imwrite(filepath, img)
+                self.frame_urls.append(f"/xai-frames/{os.path.basename(output_dir)}/{filename}")  # ← URL
 
-        # Frame scores as CSV
-        csv_path = os.path.join(output_dir, "frame_scores.csv")
-        with open(csv_path, "w", encoding="utf-8") as f:
-            f.write("frame,fakeness_score,attention_weight\n")
-            for i, (fs, fa) in enumerate(zip(self.frame_scores, self.frame_attention)):
-                f.write(f"{i+1},{fs:.6f},{fa:.6f}\n")
+            # Frame scores CSV (all frames, for reference)
+            csv_path = os.path.join(output_dir, "frame_scores.csv")
+            with open(csv_path, "w", encoding="utf-8") as f:
+                f.write("frame,fakeness_score,attention_weight\n")
+                for i, (fs, fa) in enumerate(zip(self.frame_scores, self.frame_attention)):
+                    f.write(f"{i+1},{fs:.6f},{fa:.6f}\n")
 
-        print(f"[XAI] Report saved to: {output_dir}/")
-        print(self.text_summary())
-
+            print(f"[XAI] Report saved → {output_dir}/  ({len(self.annotated_frames)} frames)")
+            print(self.text_summary())
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  4.  Visualization utilities
@@ -418,32 +421,40 @@ class ExplainableDeepfakeDetector(DeepfakeVideoDetector):
         seq_tensor = torch.stack(seq_features, dim=0).unsqueeze(0)
         return seq_tensor, frame_meta, heatmap_list
 
+
     # ── Main explain + predict ────────────────────────────────────────────────
     def predict_with_explanation(
         self,
         video_path: str,
         top_k_frames: int = 5,
-    ) -> Tuple[str, float, DeepfakeExplanation]:
+    ) -> Tuple[str, float, Optional[DeepfakeExplanation]]:
         """
         Returns (label, probability, DeepfakeExplanation).
+        DeepfakeExplanation is None if label is REAL.
+        Only top_k_frames (default 5) annotated frames are stored.
         """
         print(f"🔍 [XAI] Predicting + explaining: {video_path}")
 
-        seq, frame_meta, heatmap_list = self.extract_features_with_explanations(
-            video_path
-        )
+        seq, frame_meta, heatmap_list = self.extract_features_with_explanations(video_path)
 
         if self.device.type == "cuda":
             seq = seq.half()
 
         # ── LSTM forward + attention ──────────────────────────────────────────
         with torch.no_grad():
-            lstm_out, _ = self.model.lstm(seq)       # [1, T, 512]
-            attn_weights, _ = self.attn_head(lstm_out.float())  # [1, T]
+            lstm_out, _     = self.model.lstm(seq)
+            attn_weights, _ = self.attn_head(lstm_out.float())
             logit           = self.model.fc(torch.mean(lstm_out, dim=1)).squeeze()
             prob            = torch.sigmoid(logit).item()
 
         label = "FAKE" if prob > 0.5 else "REAL"
+        print(f"🎯 [XAI] {label}  (prob={prob:.4f})")
+
+        # ── Early exit for REAL — skip all XAI work ──────────────────────────
+        if label == "REAL":
+            return label, prob, None
+
+        # ── Everything below only runs for FAKE videos ────────────────────────
         attn_np = attn_weights.squeeze(0).cpu().float().numpy()   # [T]
         T = len(frame_meta)
 
@@ -453,44 +464,43 @@ class ExplainableDeepfakeDetector(DeepfakeVideoDetector):
             * float(attn_np[i] if i < len(attn_np) else 0.0)
             for i in range(T)
         ])
-        # Normalise to [0,1]
-        fs_max = frame_scores.max()
-        if fs_max > 0:
-            frame_scores_norm = frame_scores / fs_max
-        else:
-            frame_scores_norm = frame_scores
 
+        # Normalise to [0, 1]
+        fs_max = frame_scores.max()
+        frame_scores_norm = frame_scores / fs_max if fs_max > 0 else frame_scores
+
+        # ── Top-k most suspicious frame indices ──────────────────────────────
         top_fake = np.argsort(frame_scores_norm)[::-1][:top_k_frames].tolist()
 
-        # ── Build annotated frames ────────────────────────────────────────────
+        # ── Build annotated frames for TOP 5 ONLY ────────────────────────────
         poi_names = list(frame_meta[0]["poi_centers"].keys()) if frame_meta else []
         annotated = []
-        for i, (meta, hmaps) in enumerate(zip(frame_meta, heatmap_list)):
+        for i in top_fake:                        # ← only top 5, not all T frames
             ann = VisualizationUtils.annotate_full_frame(
-                frame_rgb     = meta["rgb_frame"],
-                frame_score   = float(frame_scores_norm[i]),
-                frame_attn    = float(attn_np[i]) if i < len(attn_np) else 0.0,
-                poi_centers   = meta["poi_centers"],
-                poi_heatmaps  = hmaps,
-                label         = label,
-                frame_idx     = meta["frame_idx"],
+                frame_rgb    = frame_meta[i]["rgb_frame"],
+                frame_score  = float(frame_scores_norm[i]),
+                frame_attn   = float(attn_np[i]) if i < len(attn_np) else 0.0,
+                poi_centers  = frame_meta[i]["poi_centers"],
+                poi_heatmaps = heatmap_list[i],
+                label        = label,
+                frame_idx    = frame_meta[i]["frame_idx"],
             )
             annotated.append(ann)
 
         explanation = DeepfakeExplanation(
             label            = label,
             probability      = prob,
-            frame_scores     = frame_scores_norm,
-            frame_attention  = attn_np[:T],
-            poi_heatmaps     = {i: heatmap_list[i] for i in range(T)},
+            frame_scores     = frame_scores_norm,       # all T scores kept for CSV/analysis
+            frame_attention  = attn_np[:T],             # all T weights kept for CSV/analysis
+            poi_heatmaps     = {i: heatmap_list[i] for i in top_fake},  # ← only top 5
             poi_names        = poi_names,
-            annotated_frames = annotated,
+            annotated_frames = annotated,               # ← only 5 items
             top_fake_frames  = top_fake,
         )
 
-        print(f"🎯 [XAI] {label}  (prob={prob:.4f})")
         return label, prob, explanation
-
+   
+   
     # ── Optional: write annotated video ──────────────────────────────────────
     def save_annotated_video(
         self,

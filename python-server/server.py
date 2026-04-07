@@ -1,3 +1,5 @@
+import shutil
+
 from flask import Flask, request, jsonify, send_from_directory
 import torch
 import torchvision.transforms as transforms
@@ -266,85 +268,58 @@ def extract_watermark():
 
 @app.route("/predict-video", methods=["POST"])
 def predict_video():
- 
+
     if "video" not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
- 
+
     file = request.files["video"]
- 
-    # ── Use a UUID filename to avoid collisions under concurrent requests ──────
+
     ext        = os.path.splitext(file.filename)[-1] or ".mp4"
     safe_name  = f"{uuid.uuid4().hex}{ext}"
     video_path = os.path.join(UPLOAD_DIR, safe_name)
     file.save(video_path)
- 
-    # ── Choose explanation depth from optional query param ────────────────────
-    # GET /predict-video?explain=full   → annotated frame images included
-    # GET /predict-video?explain=lite   → scores only, no images  (default)
-    # GET /predict-video?explain=none   → behaves like the original endpoint
-    explain_mode = request.args.get("explain", "lite").lower()
- 
-    # ── Optional: save XAI report to disk (omit if you don't need it) ─────────
+
     xai_dir = os.path.join(UPLOAD_DIR, f"xai_{safe_name}")
- 
+    label   = None  # guard for finally block
+
     try:
-        if explain_mode == "none":
-            # ── Original behaviour ────────────────────────────────────────────
-            label, prob = detector.predict(video_path)
-            return jsonify({
-                "prediction": label,
-                "confidence": round(float(prob), 4),
-            })
- 
-        # ── XAI path ──────────────────────────────────────────────────────────
         label, prob, explanation = detector.predict_with_explanation(video_path)
- 
-        # ── Build response ────────────────────────────────────────────────────
+
+        # ── REAL video — return early, no XAI ────────────────────────────────
+        if label != "FAKE" or explanation is None:
+            return jsonify({
+                "prediction":  label,
+                "confidence":  round(float(prob), 4),
+                "explanation": "The video appears authentic. No manipulation detected."
+            })
+
+        # ── FAKE video — save report first so frame_urls gets populated ───────
+        explanation.save_report(xai_dir)
+
         response = {
-            "prediction": label,
-            "confidence": round(float(prob), 4),
- 
-            # Per-frame breakdown
-            "frame_analysis": [
+            "prediction":     label,
+            "confidence":     round(float(prob), 4),
+            "explanation_text": _build_explanation_text(label, prob, explanation),
+            "result": [
                 {
-                    "frame":           int(i + 1),
-                    "fakeness_score":  round(float(explanation.frame_scores[i]), 4),
+                    "url":              explanation.frame_urls[rank],
+                    "fakeness_score":   round(float(explanation.frame_scores[i]), 4),
                     "attention_weight": round(float(explanation.frame_attention[i]), 4),
                 }
-                for i in range(len(explanation.frame_scores))
-            ],
- 
-            # Which frames are most suspicious (1-indexed for readability)
-            "top_suspicious_frames": [int(f + 1) for f in explanation.top_fake_frames],
- 
-            # Per-region (POI) mean activation across all frames
-            "region_analysis": _build_region_analysis(explanation),
- 
-            # Plain-text explanation paragraph
-            "explanation_text": _build_explanation_text(label, prob, explanation),
+                for rank, i in enumerate(explanation.top_fake_frames)
+            ]
         }
- 
-        # ── Include base64 annotated frames only in "full" mode ───────────────
-        if explain_mode == "full":
-            response["annotated_frames"] = _encode_frames(explanation)
- 
-        # ── Optionally persist the report ─────────────────────────────────────
-        explanation.save_report(xai_dir)
- 
+
         return jsonify(response)
- 
+
     except Exception as e:
         app.logger.exception("Prediction failed")
-        return jsonify({"error": str(e)}), 500
- 
-    finally:
-        # Always clean up uploaded video
         if os.path.exists(video_path):
-            os.remove(video_path)
-        # Clean up XAI report dir if it was created but not needed
-        if explain_mode == "none" and os.path.exists(xai_dir):
-            shutil.rmtree(xai_dir, ignore_errors=True)
- 
+            shutil.rmtree(video_path)
+        if os.path.exists(xai_dir):
+            shutil.rmtree(xai_dir)    
+        return jsonify({"error": str(e)}), 500
+        
 
 # -----------------------------
 # 🖥️ Run Server

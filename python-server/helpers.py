@@ -78,18 +78,26 @@ def _build_explanation_text(label: str, prob: float, explanation) -> str:
         )
  
  
-def _encode_frames(explanation) -> list[dict]:
+def _encode_frames(explanation, frame_indices: list[int] | None = None) -> list[dict]:
     """
     Base64-encode annotated frames so they can be embedded directly in the
     JSON response and rendered by a frontend without a separate file endpoint.
+
+    Args:
+        frame_indices: Optional list of indices to encode. If None, encodes all frames.
     """
     import cv2
     encoded = []
-    for i, frame_bgr in enumerate(explanation.annotated_frames):
+
+    # Use provided indices or fall back to all frames
+    indices = frame_indices if frame_indices is not None else range(len(explanation.annotated_frames))
+
+    for i in indices:
+        frame_bgr = explanation.annotated_frames[i]
         ok, buf = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
         if ok:
             encoded.append({
-                "frame":      int(i + 1),
-                "image_b64":  base64.b64encode(buf).decode("utf-8"),
+                "frame":     int(i + 1),  # 1-indexed for readability
+                "image_b64": base64.b64encode(buf).decode("utf-8"),
             })
     return encoded
