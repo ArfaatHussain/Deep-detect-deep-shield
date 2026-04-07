@@ -14,7 +14,8 @@ import { Video } from 'expo-av';
 import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { detectVideo } from '../service/videoService';
 const VideoDetection = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
 
@@ -63,18 +64,25 @@ const VideoDetection = ({ navigation }) => {
     setLoading(true);
     setResult(null);
 
-    // Simulate API call
-    setTimeout(() => {
+    const userString = await AsyncStorage.getItem('user');
+    if (!userString) {
+      showToast('User is not logged in');
       setLoading(false);
-      const isFake = Math.random() > 0.5;
-      setResult({
-        isFake,
-        confidence: (Math.random() * 30 + 70).toFixed(1),
-        details: isFake
-          ? 'This video shows signs of manipulation'
-          : 'This video appears to be authentic',
-      });
-    }, 4000);
+      return;
+    }
+
+    const user = JSON.parse(userString);
+    const ownerId = user._id;
+
+    try {
+      const videoData = await detectVideo(selectedVideo, ownerId);
+      setResult(videoData);
+    } catch (error) {
+      console.error("Error analyzing video:", error);
+      showToast('Failed to analyze video');
+    }finally{
+      setLoading(false);
+    }
   };
 
   return (
@@ -127,22 +135,22 @@ const VideoDetection = ({ navigation }) => {
         <View
           style={[
             styles.resultContainer,
-            result.isFake
+            result.prediction.toLowerCase() === "fake"
               ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
               : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
           ]}>
           <Icon
-            name={result.isFake ? 'warning-outline' : 'checkmark-circle-outline'}
+            name={result.prediction.toLowerCase() === "fake" ? 'warning-outline' : 'checkmark-circle-outline'}
             size={40}
-            color={result.isFake ? '#EF4444' : '#10B981'}
+            color={result.prediction.toLowerCase() === "fake" ? '#EF4444' : '#10B981'}
           />
           <Text style={styles.resultTitle}>
-            {result.isFake ? 'Potential Deepfake Detected' : 'Authentic Video'}
+            {result.prediction?.toLowerCase() === "fake" ? 'Potential Deepfake Detected' : 'Authentic Video'}
           </Text>
           <Text style={styles.resultConfidence}>
-            Confidence: {result.confidence}%
+            Probability: {result.probability}%
           </Text>
-          <Text style={styles.resultDetails}>{result.details}</Text>
+          <Text style={styles.resultDetails}>{result.explanation_text}</Text>
         </View>
       )}
 
