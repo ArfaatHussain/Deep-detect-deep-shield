@@ -293,33 +293,24 @@ def predict_video():
                 "explanation": "The video appears authentic. No manipulation detected."
             })
 
-        # ── FAKE video — save report first so frame_urls gets populated ───────
-        explanation.save_report(xai_dir)
+        # ── FAKE video ────────────────────────────────────────────────────────
+        explanation.save_report(xai_dir)  # generates video, populates video_url
 
-        response = {
-            "prediction":     label,
-            "confidence":     round(float(prob), 4),
+        return jsonify({
+            "prediction":       label,
+            "confidence":       round(float(prob), 4),
             "explanation_text": _build_explanation_text(label, prob, explanation),
-            "result": [
-                {
-                    "url":              explanation.frame_urls[rank],
-                    "fakeness_score":   round(float(explanation.frame_scores[i]), 4),
-                    "attention_weight": round(float(explanation.frame_attention[i]), 4),
-                }
-                for rank, i in enumerate(explanation.top_fake_frames)
-            ]
-        }
-
-        return jsonify(response)
+            "video_url":        explanation.video_url,
+        })
 
     except Exception as e:
         app.logger.exception("Prediction failed")
         if os.path.exists(video_path):
-            shutil.rmtree(video_path)
-        if os.path.exists(xai_dir):
-            shutil.rmtree(xai_dir)    
+            os.remove(video_path)
+        # Remove XAI dir only if video was REAL (no output needed)
+        if os.path.exists(xai_dir) and locals().get("label") != "FAKE":
+            shutil.rmtree(xai_dir, ignore_errors=True)   
         return jsonify({"error": str(e)}), 500
-        
 
 # -----------------------------
 # 🖥️ Run Server
