@@ -363,6 +363,12 @@ export default function History() {
                                         {item.watermarkedMatched ? 'Matched' : 'Not Matched'}
                                     </Text>
                                 </View>
+                                 {/* <Image
+                                source={{ uri: `${item.imageUrl}` }}
+                                style={styles.tamperHistoryImage}
+                                resizeMode="contain"
+                                onError={(error) => console.log("Result image loading error:", error.nativeEvent.error)}
+                            /> */}
                             </View>
                         )}
                     </View>

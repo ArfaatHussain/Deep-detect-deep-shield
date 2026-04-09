@@ -102,7 +102,7 @@ const ImageDetection = ({ navigation }) => {
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       console.log("File name: ",fileName)
       console.log("File url: ",fileUri)
-      const { uri } = await FileSystem.downloadAsync(`${API_URL}${photoUrl}`, fileUri);
+      const { uri } = await FileSystem.downloadAsync(`${photoUrl}`, fileUri);
       const asset = await MediaLibrary.createAssetAsync(uri);
       return asset.uri;
     } catch (err) {
@@ -203,7 +203,7 @@ const ImageDetection = ({ navigation }) => {
               <Text style={[styles.infoTitle, { color: t.textPrimary }]}>Analyzed Image</Text>
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{ uri: `${API_URL}${result.analyzedImage}` }}
+                  source={{ uri: `${result.analyzedImage}` }}
                   style={styles.highlightedImage}
                   resizeMode="contain"
                 />

@@ -57,7 +57,8 @@ const ProtectScreen = ({ navigation }) => {
       const userData = userString ? JSON.parse(userString) : {}
       form.append("owner", userData._id)
       const res = await protectImage(form)
-      const refinedData = res.backend_response.document
+      console.log('Upload response:', res);
+      const refinedData = res.data
       setResult(refinedData);
     } catch (err) {
       console.log('Upload error:', err);
@@ -69,7 +70,7 @@ const ProtectScreen = ({ navigation }) => {
 
   // Download protected image to device
   const downloadProtectedImage = async () => {
-    if (!result?.protectedImageUrl) return showToast('No protected image!');
+    if (!result?.protected_image_url) return showToast('No protected image!');
 
     setDownloadLoading(true);
     try {
@@ -82,7 +83,7 @@ const ProtectScreen = ({ navigation }) => {
         }
       }
 
-      const imageUrl = `${PYTHON_API_URL}${result.protectedImageUrl}`;
+      const imageUrl = `${result.protected_image_url}`;
       const fileName = imageUrl.split('/uploads/').pop();
 
       // Use Expo FileSystem for temp storage
@@ -151,7 +152,7 @@ const ProtectScreen = ({ navigation }) => {
       {result && (
         <View style={[styles.resultBox, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
           <Image
-            source={{ uri: `${PYTHON_API_URL}${result.protectedImageUrl}` }}
+            source={{ uri: `${result.protected_image_url}` }}
             style={styles.resultImage}
             resizeMode="contain"
           />
