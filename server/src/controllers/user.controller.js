@@ -76,6 +76,8 @@ const clearHistory = asyncHandler(async (req, res) => {
     // Delete all history
     await Image.deleteMany({ owner: userId });
     await Video.deleteMany({ owner: userId });
+    await TamperProofHistory.deleteMany({ owner: userId });
+    await TamperProof.deleteMany({ owner: userId });
 
     res.status(200).json({
         success: true,

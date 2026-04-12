@@ -17,6 +17,6 @@ userRouter.route("/getHistory/:userId").get(getHistory);
 userRouter.route("/update/:userId").patch(upload.single("avatar"),updateProfile)
 
 // clear user history ✅ CLEAN URL
-userRouter.delete("/:userId/history", clearHistory);
+userRouter.delete("/clearHistory/:userId", clearHistory);
 
 export default userRouter;

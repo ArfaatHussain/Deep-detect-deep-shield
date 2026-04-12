@@ -16,6 +16,10 @@ import History from "../screens/History";
 import ProtectScreen from "../screens/ProtectScreen";
 import VerifyScreen from "../screens/VerifyScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
+import HelpSupportScreen from "../screens/HelpAndSupportScreen";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
+import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -102,6 +106,10 @@ const AppNavigation = ({ darkTheme }) => {
                 <Stack.Screen name="ProtectScreen" component={ProtectScreen} />
                 <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
                 <Stack.Screen name="Profile" component={ProfileScreen} />
+                <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="HelpSupport" component={HelpSupportScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: false }} />
             </Stack.Navigator>
         </NavigationContainer>
     );
