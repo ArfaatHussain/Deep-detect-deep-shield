@@ -8,6 +8,7 @@ import { Video } from "../models/video.model.js"
 import { TamperProof } from "../models/tamper-proof.model.js"
 import { TamperProofHistory } from "../models/tamper-proof-history.model.js"
 import bcrypt from "bcrypt";
+import { uploadToCloudinary } from "../utils/cloudinary.js"
 
 const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find()
@@ -83,7 +84,7 @@ const clearHistory = asyncHandler(async (req, res) => {
 });
 
 const updateProfile = asyncHandler(async (req, res) => {
-    const {userId} = req.params;
+    const { userId } = req.params;
     const { email, fullName, username, newPassword, oldPassword } = req.body;
 
     if (!userId) throw new ApiError(400, "User id is missing")
@@ -106,7 +107,10 @@ const updateProfile = asyncHandler(async (req, res) => {
     if (email) fieldsToUpdate.email = email
     if (fullName) fieldsToUpdate.fullName = fullName
     if (username) fieldsToUpdate.username = username
-    if (req.file) fieldsToUpdate.avatar = req.file.path
+    if (req.file) {
+        const response = await uploadToCloudinary(req.file.path)
+        fieldsToUpdate.avatar = response.secure_url
+    }
 
     if (newPassword) {
         if (!oldPassword) throw new ApiError(400, "Old password is required")
@@ -123,7 +127,7 @@ const updateProfile = asyncHandler(async (req, res) => {
         userId,
         { $set: fieldsToUpdate },
         { new: true }
-    ).select('-password') 
+    ).select('-password')
 
     res.status(200).json({ success: true, data: updatedDocument })
 })
