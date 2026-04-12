@@ -287,6 +287,45 @@ export default function History() {
     const renderTamperItem = ({ item }) => {
         const isProtect = tamperGenerationHistory.some(genItem => genItem._id === item._id);
 
+        // Function to download protected image (only for protect items)
+        const downloadProtectedImage = async (item) => {
+            const imageUrl = item.protectedImageUrl;
+            
+            if (!imageUrl) {
+                Toast.show("No protected image available to download");
+                return;
+            }
+
+            try {
+                setDownloadLoading(prev => ({ ...prev, [item._id]: true }));
+
+                // Request permission
+                const { status } = await MediaLibrary.requestPermissionsAsync();
+                if (status !== "granted") {
+                    Toast.show("Please allow media access to download.");
+                    return;
+                }
+
+                // Extract filename from URL
+                const fileName = imageUrl.split('/').pop();
+                const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+
+                // Download file
+                const { uri } = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+                // Save to gallery
+                await MediaLibrary.createAssetAsync(uri);
+
+                Toast.show("Protected image saved to gallery");
+
+            } catch (error) {
+                console.error("Download error:", error);
+                Toast.show("Failed to download protected image");
+            } finally {
+                setDownloadLoading(prev => ({ ...prev, [item._id]: false }));
+            }
+        };
+
         return (
             <View
                 style={[
@@ -324,53 +363,24 @@ export default function History() {
                 </Text>
 
                 {/* Images Container */}
-                <View style={styles.tamperImagesContainer}>
-                    <View style={styles.tamperImageWrapper}>
-                        <Text style={[styles.imageLabel, { color: t.labelText }]}>
-                            {isProtect ? "Original Image" : "Tampered Image"}
-                        </Text>
-                        <Image
-                            source={{ uri: `${item.originalImageUrl}`}}
-                            style={styles.tamperHistoryImage}
-                            resizeMode="contain"
-                            onError={(error) => console.log("Image loading error:", error.nativeEvent.error)}
-                        />
-                        {tamperFilter == "verify" && (
-                            <View style={[
-                                styles.tamperStatusBadge,
-                                { backgroundColor: item.tampered ? '#FEE2E2' : '#D1FAE5' }
-                            ]}>
-                                {/* Left */}
-                                <View style={styles.tamperStatusRow}>
-                                    <Icon
-                                        name={item.tampered ? 'close-circle' : 'checkmark-circle'}
-                                        size={16}
-                                        color={item.tampered ? '#B91C1C' : '#047857'}
-                                    />
-                                    <Text style={[styles.tamperStatusText, { color: item.tampered ? '#B91C1C' : '#047857' }]}>
-                                        {item.tampered ? 'Tampered' : 'Authentic'}
-                                    </Text>
-                                </View>
-
-                                {/* Right */}
-                                <View style={styles.tamperStatusRow}>
-                                    <Icon
-                                        name={item.watermarkedMatched ? 'shield-checkmark' : 'shield-outline'}
-                                        size={16}
-                                        color={item.watermarkedMatched ? '#047857' : '#B91C1C'}
-                                    />
-                                    <Text style={[styles.tamperStatusText, { color: item.watermarkedMatched ? '#047857' : '#B91C1C' }]}>
-                                        {item.watermarkedMatched ? 'Matched' : 'Not Matched'}
-                                    </Text>
-                                </View>
-                            </View>
-                        )}
-                    </View>
-
-                    {tamperFilter == "protect" && (
+                {isProtect ? (
+                    // PROTECT items: Show two images side by side
+                    <View style={styles.tamperImagesContainer}>
                         <View style={styles.tamperImageWrapper}>
                             <Text style={[styles.imageLabel, { color: t.labelText }]}>
-                                {isProtect ? "Protected Image" : "Extracted Image"}
+                                Uploaded Image
+                            </Text>
+                            <Image
+                                source={{ uri: `${item.originalImageUrl}`}}
+                                style={styles.tamperHistoryImage}
+                                resizeMode="contain"
+                                onError={(error) => console.log("Image loading error:", error.nativeEvent.error)}
+                            />
+                        </View>
+
+                        <View style={styles.tamperImageWrapper}>
+                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                                Protected Image
                             </Text>
                             <Image
                                 source={{ uri: `${item.protectedImageUrl}` }}
@@ -379,53 +389,78 @@ export default function History() {
                                 onError={(error) => console.log("Result image loading error:", error.nativeEvent.error)}
                             />
                         </View>
-                    )}
-                </View>
-
-                {/* Verification Result (for verify items) */}
-                {!isProtect && item.verificationResult && (
-                    <View style={[styles.verificationContainer, {
-                        backgroundColor: item.verificationResult.isValid ? '#0c710f20' : '#7e050520',
-                        borderColor: item.verificationResult.isValid ? '#0c710f' : '#7e0505',
-                        borderWidth: 1,
-                        borderRadius: 8,
-                        padding: 10,
-                        marginTop: 10,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 8
-                    }]}>
-                        <Ionicons
-                            name={item.verificationResult.isValid ? "checkmark-circle" : "close-circle"}
-                            size={20}
-                            color={item.verificationResult.isValid ? "#0c710f" : "#7e0505"}
+                    </View>
+                ) : (
+                    // VERIFY items: Show single uploaded image
+                    <View>
+                        <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                            Uploaded Image
+                        </Text>
+                        <Image
+                            source={{ uri: `${item.imageUrl}` }}
+                            style={[styles.tamperHistoryImage, { width: '100%' }]}
+                            resizeMode="contain"
+                            onError={(error) => console.log("Image loading error:", error.nativeEvent.error)}
                         />
-                        <View>
-                            <Text style={[styles.verificationText, {
-                                color: item.verificationResult.isValid ? "#0c710f" : "#7e0505",
-                                fontWeight: '600'
-                            }]}>
-                                {item.verificationResult.isValid ? 'Valid Image' : 'Invalid/Tampered Image'}
-                            </Text>
-                            {item.verificationResult.message && (
-                                <Text style={[styles.verificationMessage, { color: t.descriptionText, marginTop: 2 }]}>
-                                    {item.verificationResult.message}
-                                </Text>
-                            )}
-                        </View>
                     </View>
                 )}
 
-                {/* Download button for result images */}
-                {item.resultImage && (
+                {/* Verification Result (for verify items only) - Combined Status */}
+                {!isProtect && (
+                    <>
+                        <View style={[styles.verificationContainer, {
+                            backgroundColor: item.tampered ? '#FEE2E2' : '#D1FAE5',
+                            borderColor: item.tampered ? '#7e0505' : '#0c710f',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            padding: 10,
+                            marginTop: 10,
+                        }]}>
+                            {/* Combined Status Rows in one container */}
+                            <View style={styles.tamperStatusRow}>
+                                <Icon
+                                    name={item.tampered ? 'close-circle' : 'checkmark-circle'}
+                                    size={16}
+                                    color={item.tampered ? '#B91C1C' : '#047857'}
+                                />
+                                <Text style={[styles.tamperStatusText, { color: item.tampered ? '#B91C1C' : '#047857' }]}>
+                                    {item.tampered ? 'Tampered' : 'Authentic'}
+                                </Text>
+                                
+                                <View style={styles.statusDivider} />
+                                
+                                <Icon
+                                    name={item.watermarkedMatched ? 'shield-checkmark' : 'shield-outline'}
+                                    size={16}
+                                    color={item.watermarkedMatched ? '#047857' : '#B91C1C'}
+                                />
+                                <Text style={[styles.tamperStatusText, { color: item.watermarkedMatched ? '#047857' : '#B91C1C' }]}>
+                                    {item.watermarkedMatched ? 'Watermark Matched' : 'Watermark Not Matched'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Verification result message if available */}
+                        {item.verificationResult && item.verificationResult.message && (
+                            <Text style={[styles.verificationMessage, { color: t.descriptionText, marginTop: 8 }]}>
+                                {item.verificationResult.message}
+                            </Text>
+                        )}
+                    </>
+                )}
+
+                {/* Download button for PROTECT items only */}
+                {isProtect && (
                     <TouchableOpacity
                         style={[styles.downloadButton, { position: 'relative', marginTop: 10, alignSelf: 'flex-end' }]}
-                        onPress={() => {
-                            // Add download functionality here
-                            Toast.show('Download coming soon!');
-                        }}
+                        onPress={() => downloadProtectedImage(item)}
+                        disabled={downloadLoading[item._id]}
                     >
-                        <Ionicons name="download-outline" size={20} color="#fff" />
+                        {downloadLoading[item._id] ? (
+                            <Ionicons name="sync" size={20} color="#fff" />
+                        ) : (
+                            <Ionicons name="download-outline" size={20} color="#fff" />
+                        )}
                     </TouchableOpacity>
                 )}
             </View>
@@ -469,6 +504,11 @@ export default function History() {
                         </View>
                     </View>
 
+                    {/* Timestamp */}
+                    <Text style={[styles.itemTimestamp, { color: t.descriptionText }]}>
+                        {new Date(item.createdAt).toLocaleString()}
+                    </Text>
+
                     {/* ===== DOWNLOAD ICON FOR FAKE ITEMS ===== */}
                     {hasDetectionResult && (
                         <TouchableOpacity
@@ -489,7 +529,7 @@ export default function History() {
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                             <View style={{ flex: 1, marginRight: 8 }}>
                                 <Text style={[styles.imageLabel, { color: t.labelText }]}>
-                                    Original Image
+                                    Uploaded Image
                                 </Text>
                                 <Image
                                     source={{ uri: `${item.imageUrl}` }}
@@ -508,10 +548,15 @@ export default function History() {
                             </View>
                         </View>
                     ) : (
-                        <Image
-                            source={{ uri: `${item.imageUrl}` }}
-                            style={[styles.historyImage, { width: '100%' }]}
-                        />
+                        <>
+                            <Text style={[styles.imageLabel, { color: t.labelText }]}>
+                                Uploaded Image
+                            </Text>
+                            <Image
+                                source={{ uri: `${item.imageUrl}` }}
+                                style={[styles.historyImage, { width: '100%' }]}
+                            />
+                        </>
                     )}
 
                     {!!item.detectionResult?.explanation && (
@@ -538,6 +583,26 @@ export default function History() {
                         },
                     ]}
                 >
+                    {/* ===== FAKE / REAL BADGE ===== */}
+                    <View style={styles.badgeContainer}>
+                        <View
+                            style={[
+                                styles.badge,
+                                {
+                                    backgroundColor: hasVideoDetection ? "#7e0505" : "#0c710f"
+                                },
+                            ]}
+                        >
+                            <Text style={styles.badgeText}>
+                                {hasVideoDetection ? "FAKE" : "REAL"}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Timestamp */}
+                    <Text style={[styles.itemTimestamp, { color: t.descriptionText }]}>
+                        {new Date(item.createdAt).toLocaleString()}
+                    </Text>
 
                     {/* ===== DOWNLOAD ICON FOR FAKE VIDEOS ===== */}
                     {hasVideoDetection && (
@@ -559,7 +624,7 @@ export default function History() {
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                             <View style={{ flex: 1, marginRight: 8 }}>
                                 <Text style={[styles.videoLabel, { color: t.labelText }]}>
-                                    Original Video
+                                    Uploaded Video
                                 </Text>
                                 <Video
                                     source={{ uri: `${item.videoUrl}` }}
@@ -582,14 +647,19 @@ export default function History() {
                             </View>
                         </View>
                     ) : (
-                        <View style={styles.singleVideoContainer}>
-                            <Video
-                                source={{ uri: `${item.videoUrl}` }}
-                                style={[styles.historyVideo]}
-                                controls={true}
-                                paused={true}
-                            />
-                        </View>
+                        <>
+                            <Text style={[styles.videoLabel, { color: t.labelText }]}>
+                                Uploaded Video
+                            </Text>
+                            <View style={styles.singleVideoContainer}>
+                                <Video
+                                    source={{ uri: `${item.videoUrl}` }}
+                                    style={[styles.historyVideo]}
+                                    controls={true}
+                                    paused={true}
+                                />
+                            </View>
+                        </>
                     )}
 
                     {!!item.detectionResult?.explanation && (
@@ -893,36 +963,39 @@ const styles = StyleSheet.create({
     verificationMessage: {
         fontSize: 12,
     },
-    tamperStatusBadge: {
-        marginTop: 8,
-        padding: 8,
-        borderRadius: 8,
-        flexDirection: 'row',          // ✅ side by side
-        justifyContent: 'space-between', // ✅ left and right
-        alignItems: 'center',
+    
+    statusDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        marginHorizontal: 10,
     },
+    
     tamperStatusRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        marginVertical: 2,
     },
+    
     tamperStatusText: {
         fontSize: 13,
         fontWeight: '600',
     },
+    
     videoLabel: {
         fontSize: 12,
         fontWeight: '500',
         marginBottom: 6,
         textAlign: 'center',
     },
+    
     historyVideo: {
         width: '100%',
         height: 150,
         borderRadius: 8,
         backgroundColor: '#000',
     },
+    
     singleVideoContainer: {
         position: 'relative',
         width: '100%',

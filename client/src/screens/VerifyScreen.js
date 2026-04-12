@@ -63,9 +63,8 @@ const VerifyScreen = ({ navigation }) => {
       form.append('owner', user._id);
 
       const res = await verifyImageService(form);
-      const data = res.backend_response.document
-      // console.log("Result: ",res.backend_response.document)
-      setResult(data);
+      console.log("Result: ",res);
+      setResult(res);
       showToast('Verification completed!');
     } catch (err) {
       console.log('Verification error:', err.message || err);
@@ -125,26 +124,26 @@ const VerifyScreen = ({ navigation }) => {
       {/* Result Card */}
       {result && (
         <View style={[styles.resultCard, {
-          backgroundColor: result.tampered ? '#FEE2E2' : '#D1FAE5',
-          borderColor: result.tampered ? '#FCA5A5' : '#34D399',
+          backgroundColor: !result.watermark_matched ? '#FEE2E2' : '#D1FAE5',
+          borderColor: !result.watermark_matched ? '#FCA5A5' : '#34D399',
         }]}>
           <Icon
-            name={result.tampered ? 'close-circle' : 'checkmark-circle'}
+            name={!result.watermark_matched ? 'close-circle' : 'checkmark-circle'}
             size={40}
-            color={result.tampered ? '#B91C1C' : '#047857'}
+            color={!result.watermark_matched ? '#B91C1C' : '#047857'}
             style={{ marginBottom: 10 }}
           />
-          <Text style={[styles.resultCardText, { color: result.tampered ? '#B91C1C' : '#047857' }]}>
-            {result.tampered ? 'Tampered (Watermark Missing)' : 'Authentic (Watermark Found)'}
+          <Text style={[styles.resultCardText, { color: !result.watermark_matched ? '#B91C1C' : '#047857' }]}>
+            {!result.watermark_matched ? 'Tampered (Watermark Missing)' : 'Authentic (Watermark Found)'}
           </Text>
 
           {/* Extra details */}
           <Text style={{ marginTop: 8, color: '#6B7280', fontSize: 13 }}>
-            Watermark Match: {result.watermarkedMatched ? 'Yes' : 'No'}
+            Watermark Match: {result.watermark_matched ? 'Yes' : 'No'}
           </Text>
-          <Text style={{ color: '#6B7280', fontSize: 13 }}>
+          {/* <Text style={{ color: '#6B7280', fontSize: 13 }}>
             Verified At: {new Date(result.createdAt).toLocaleString()}
-          </Text>
+          </Text> */}
         </View>
       )}
     </ScrollView>

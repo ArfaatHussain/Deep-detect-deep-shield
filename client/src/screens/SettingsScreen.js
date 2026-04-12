@@ -528,7 +528,7 @@ const SettingsScreen = ({ navigation }) => {
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: t.logoutBtnBg || t.cardBg }]}
+          style={[styles.logoutButton, { backgroundColor: darkTheme? t.cardBg : t.logoutBtnBg }]}
           onPress={handleLogout}
           activeOpacity={0.7}
         >

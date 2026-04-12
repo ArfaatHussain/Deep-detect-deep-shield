@@ -257,7 +257,7 @@ def extract_watermark():
 
         Thread(
             target=send_to_backend,
-            args=(data_to_send, "addDocumentToTamperProofHistory")
+            args=(data_to_send, "/tamper/addDocumentToTamperProofHistory")
         ).start()
 
     return jsonify({
