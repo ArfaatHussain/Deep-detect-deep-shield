@@ -43,7 +43,7 @@ const register = asyncHandler(
         if (req.file) {
             const response = await uploadToCloudinary(req.file.path);
             console.log("Response URL from cloudinary: ", response.secure_url)
-            fieldsToAdd.avatar = response.url;
+            fieldsToAdd.avatar = response.secure_url;
         }
 
         fieldsToAdd.password = await bcrypt.hash(password, 10);
