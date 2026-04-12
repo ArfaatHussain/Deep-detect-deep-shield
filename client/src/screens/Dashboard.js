@@ -49,7 +49,7 @@ const Dashboard = ({ navigation }) => {
       const response = await getHistory(userId);
       const imagesCount = response.data.imageHistory.length;
       const videosCount = response.data.videoHistory.length;
-      const imagesProtected = response.data.imagesProtected?.length || 0;
+      const imagesProtected = response.data.tamperGenerationHistory?.length || 0;
       setAnalytics({ imagesCount, videosCount, imagesProtected });
     } catch (error) {
       console.log(error);
