@@ -12,7 +12,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
 import { loadUser } from '../utils/loadUser';
-import { updateUser, deleteHistory } from '../service/userService';
+import { deleteHistory } from '../service/userService';
 
 const SettingsScreen = ({ navigation }) => {
   const { darkTheme, toggleTheme } = useContext(ThemeContext);
@@ -25,9 +25,7 @@ const SettingsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [editedFullName, setEditedFullName] = useState('');
   const [editedEmail, setEditedEmail] = useState('');
-  const [profileImage, setProfileImage] = useState(null);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [avatar, setAvatar] = useState(null);
   const [editedUsername, setEditedUsername] = useState('');
 
   useEffect(() => {
@@ -35,9 +33,24 @@ const SettingsScreen = ({ navigation }) => {
   }, []);
 
   // Refresh user data when returning from Profile screen
+  // Replace your existing focus listener with this:
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadUserData();
+      // ✅ Check if Profile screen passed back updated data
+      const updatedProfile = navigation.getState()
+        ?.routes?.find(r => r.name === 'Settings')
+        ?.params?.updatedProfile;
+
+      if (updatedProfile) {
+        setEditedFullName(updatedProfile.fullName || '');
+        setEditedUsername(updatedProfile.username || '');
+        setEditedEmail(updatedProfile.email || '');
+        setAvatar(updatedProfile.avatar || null);
+        // Clear the param so it doesn't re-apply
+        navigation.setParams({ updatedProfile: null });
+      } else {
+        loadUserData(); // normal refresh
+      }
     });
     return unsubscribe;
   }, [navigation]);
@@ -45,11 +58,12 @@ const SettingsScreen = ({ navigation }) => {
   const loadUserData = async () => {
     try {
       const userData = await loadUser();
+      console.log('Loaded user data in Settings:', userData);
       setUser(userData);
       setEditedFullName(userData.fullName || userData.name || '');
       setEditedUsername(userData.username || '');
       setEditedEmail(userData.email || '');
-      setProfileImage(userData.profileImage || null);
+      setAvatar(userData.avatar || null);
     } catch (error) {
       console.log('Error loading user:', error);
     }
@@ -85,45 +99,6 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  const handleImagePicker = () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-      maxHeight: 500,
-      maxWidth: 500,
-      quality: 0.8,
-    };
-    launchImageLibrary(options, async (response) => {
-      if (response.didCancel) return;
-      if (response.error) {
-        Toast.show('Failed to pick image');
-        return;
-      }
-      setProfileImage(response.assets[0].uri);
-      await uploadProfileImage(response.assets[0]);
-    });
-  };
-
-  const uploadProfileImage = async (imageAsset) => {
-    setImageLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('avatar', {
-        uri: imageAsset.uri,
-        type: imageAsset.type || 'image/jpeg',
-        name: imageAsset.fileName || 'profile.jpg',
-      });
-      const userData = await loadUser();
-      const response = await updateUser(userData._id, formData);
-      setUser(response.data.data);
-      Toast.show('Profile image updated successfully', Toast.SHORT);
-    } catch (error) {
-      Toast.show('Failed to upload profile image');
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
   const handleLogoutConfirm = async () => {
     try {
       await AsyncStorage.removeItem('user');
@@ -136,19 +111,14 @@ const SettingsScreen = ({ navigation }) => {
 
   const navigateToProfile = () => {
     navigation.navigate('Profile', {
-      user, editMode, editedFullName, editedUsername, editedEmail,
-      profileImage, imageLoading, loading,
-      onUpdateProfile: handleUpdateProfile,
-      onImagePicker: handleImagePicker,
-      onEditModeToggle: () => setEditMode(!editMode),
-      onCancelEdit: () => { setEditMode(false); loadUserData(); },
-      setEditedFullName, setEditedUsername, setEditedEmail,
+      user,
+      editedFullName,
+      editedUsername,
+      editedEmail,
+      avatar,
     });
   };
 
-  const handleUpdateProfile = async () => {
-    // keep your existing handleUpdateProfile logic here
-  };
 
   const SettingItem = ({ icon, title, value, onPress, showArrow = true, danger = false }) => (
     <TouchableOpacity
@@ -181,8 +151,8 @@ const SettingsScreen = ({ navigation }) => {
           activeOpacity={0.7}
         >
           <View style={styles.profileImageContainer}>
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.profileImage} />
             ) : (
               <View style={[styles.profileImagePlaceholder, { backgroundColor: t.primaryColor || t.button }]}>
                 <Text style={styles.profileImageText}>

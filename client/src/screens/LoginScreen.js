@@ -59,7 +59,6 @@ const LoginScreen = ({ navigation }) => {
       await AsyncStorage.setItem('user', JSON.stringify(user));
       await AsyncStorage.setItem('accessToken', accessToken);
 
-      Toast.show("Login successfully");
       navigation.reset({
         index: 0,
         routes: [{ name: "BottomTabs" }],

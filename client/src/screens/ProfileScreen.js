@@ -1,19 +1,7 @@
-// ProfileScreen.js
 import React, { useContext, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  ActivityIndicator,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
+  View, Text, StyleSheet, TouchableOpacity, Image, TextInput,
+  ActivityIndicator, ScrollView, StatusBar, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -21,586 +9,438 @@ import Toast from 'react-native-simple-toast';
 
 import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
-
+import { loadUser } from '../utils/loadUser';
+import { updateUser } from '../service/userService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const ProfileScreen = ({ route, navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
   const t = getTheme(darkTheme);
+  const accentColor = t.button || '#2563EB';
 
-  const {
-    user,
-    editMode,
-    editedFullName,
-    editedUsername,
-    editedEmail,
-    profileImage,
-    imageLoading,
-    loading,
-    onUpdateProfile,
-    onImagePicker,
-    onEditModeToggle,
-    onCancelEdit,
-    setEditedFullName,
-    setEditedUsername,
-    setEditedEmail,
-  } = route.params;
+  const { user, editedFullName, editedUsername, editedEmail, avatar: initialImage } = route.params;
 
-  // Local state for handling unsaved changes
-  const [localEditMode, setLocalEditMode] = useState(editMode);
+  const [localEditMode, setLocalEditMode] = useState(false);
   const [localFullName, setLocalFullName] = useState(editedFullName);
   const [localUsername, setLocalUsername] = useState(editedUsername);
   const [localEmail, setLocalEmail] = useState(editedEmail);
+  const [localImage, setLocalImage] = useState(initialImage);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [localImageAsset, setLocalImageAsset] = useState(null); // ← add this
 
   const handleImagePicker = () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-      maxHeight: 500,
-      maxWidth: 500,
-      quality: 0.8,
-    };
-
-    launchImageLibrary(options, async (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.error) {
-        console.log('ImagePicker Error: ', response.error);
-        Toast.show('Failed to pick image');
-      } else {
-        onImagePicker(response.assets[0]);
+    launchImageLibrary(
+      { mediaType: 'photo', includeBase64: false, maxHeight: 500, maxWidth: 500, quality: 0.8 },
+      (response) => {
+        if (response.didCancel) return;
+        if (response.error) { Toast.show('Failed to pick image'); return; }
+        const asset = response.assets[0];
+        setLocalImage(asset.uri);
+        setLocalImageAsset(asset); // ← store the full asset for later
       }
-    });
+    );
   };
 
   const handleSave = async () => {
-    // Update parent state before saving
-    setEditedFullName(localFullName);
-    setEditedUsername(localUsername);
-    setEditedEmail(localEmail);
-    await onUpdateProfile();
+    setLoading(true);
+    try {
+      const formData = new FormData();
+
+      // Always append text fields
+      formData.append('fullName', localFullName);
+      formData.append('username', localUsername);
+      formData.append('email', localEmail);
+
+      // Only append avatar if user picked a new one
+      if (localImageAsset) {
+        formData.append('avatar', {
+          uri: localImageAsset.uri,
+          type: localImageAsset.type || 'image/jpeg',
+          name: localImageAsset.fileName || 'profile.jpg',
+        });
+      }
+
+      const response = await updateUser(user._id, formData);
+
+      Toast.show('Profile updated successfully', Toast.SHORT);
+      setLocalEditMode(false);
+      setLocalImageAsset(null); // clear after save
+      await AsyncStorage.setItem('user', JSON.stringify(response.data.data));
+
+      navigation.navigate('Settings', {
+        updatedProfile: {
+          fullName: response.data.data.fullName,
+          username: response.data.data.username,
+          email: response.data.data.email,
+          avatar: response.data.data.avatar,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Toast.show('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setLocalFullName(editedFullName);
     setLocalUsername(editedUsername);
     setLocalEmail(editedEmail);
+    setLocalImage(initialImage); // ← reset preview too
+    setLocalImageAsset(null);    // ← discard unpicked asset
     setLocalEditMode(false);
-    onCancelEdit();
   };
 
   const handleEditToggle = () => {
     setLocalEditMode(!localEditMode);
-    onEditModeToggle();
-  };
-
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
-
-  const validateUsername = (username) => {
-    const re = /^[a-zA-Z0-9_]{3,20}$/;
-    return re.test(username);
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      year: 'numeric' 
-    });
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  const InfoBadge = ({ icon, label, value, valueColor }) => (
+    <View style={[styles.infoBadge, { backgroundColor: darkTheme ? '#2a2a3a' : '#EEF2FF' }]}>
+      <View style={[styles.infoBadgeIcon, { backgroundColor: accentColor + '22' }]}>
+        <Icon name={icon} size={16} color={accentColor} />
+      </View>
+      <View style={styles.infoBadgeText}>
+        <Text style={[styles.infoBadgeLabel, { color: t.textSecondary || t.secondaryText }]}>{label}</Text>
+        <Text style={[styles.infoBadgeValue, { color: valueColor || t.text }]}>{value}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.background }]}>
+    <View style={[styles.container, { backgroundColor: t.background }]}>
       <StatusBar barStyle={darkTheme ? 'light-content' : 'dark-content'} backgroundColor={t.background} />
 
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: t.headerBorder || t.border }]}>
+      <View style={[styles.header, { borderBottomColor: t.border }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
+          style={[styles.headerIconBtn, { backgroundColor: t.cardBg }]}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="arrow-back" size={24} color={t.text} />
+          <Icon name="arrow-back" size={20} color={t.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: t.headerText || t.text }]}>
+
+        <Text style={[styles.headerTitle, { color: t.text }]}>
           {localEditMode ? 'Edit Profile' : 'Profile'}
         </Text>
+
         {!localEditMode ? (
-          <TouchableOpacity onPress={handleEditToggle} style={styles.headerButton}>
-            <Icon name="edit" size={24} color={t.iconColor} />
+          <TouchableOpacity
+            onPress={handleEditToggle}
+            style={[styles.headerIconBtn, { backgroundColor: t.cardBg }]}
+          >
+            <Icon name="edit" size={20} color={accentColor} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerButton}>
-            {loading ? (
-              <ActivityIndicator size="small" color={t.iconColor} />
-            ) : (
-              <Icon name="check" size={24} color={t.success || '#2563EB'} />
-            )}
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={loading}
+            style={[styles.headerIconBtn, { backgroundColor: accentColor + '22' }]}
+          >
+            {loading
+              ? <ActivityIndicator size="small" color={accentColor} />
+              : <Icon name="check" size={20} color={accentColor} />
+            }
           </TouchableOpacity>
         )}
       </View>
 
+      {/* ─── KEY FIX: KAV wraps only ScrollView, behavior undefined on Android ─── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          bounces={true}
         >
-          {/* Profile Image Section */}
-          <View style={[styles.profileImageSection, { backgroundColor: t.cardBg }]}>
-            <View style={styles.profileImageWrapper}>
+          {/* ── Avatar Hero Card ── */}
+          <View style={[styles.heroCard, { backgroundColor: t.cardBg }]}>
+            {/* Decorative top strip */}
+            <View style={[styles.heroStrip, { backgroundColor: accentColor }]} />
+
+            <View style={styles.avatarWrapper}>
               <TouchableOpacity
                 onPress={localEditMode ? handleImagePicker : null}
                 disabled={!localEditMode || imageLoading}
-                activeOpacity={0.7}
-                style={styles.profileImageTouchable}
+                activeOpacity={0.8}
               >
                 {imageLoading ? (
-                  <View style={[styles.profileImagePlaceholderLarge, { backgroundColor: t.cardBg }]}>
-                    <ActivityIndicator size="large" color={t.button || '#2563EB'} />
+                  <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: t.cardBg }]}>
+                    <ActivityIndicator size="large" color={accentColor} />
                   </View>
-                ) : profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.profileImageLarge} />
+                ) : localImage ? (
+                  <Image source={{ uri: localImage }} style={styles.avatar} />
                 ) : (
-                  <View style={[styles.profileImagePlaceholderLarge, { backgroundColor: t.button || '#2563EB' }]}>
-                    <Text style={styles.profileImageLargeText}>
+                  <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: accentColor }]}>
+                    <Text style={styles.avatarInitial}>
                       {localFullName?.charAt(0).toUpperCase() || 'U'}
                     </Text>
                   </View>
                 )}
                 {localEditMode && !imageLoading && (
-                  <View style={[styles.profileCameraBadge, { backgroundColor: t.success || '#4CAF50' }]}>
-                    <Icon name="camera-alt" size={18} color="#FFF" />
+                  <View style={[styles.cameraBadge, { backgroundColor: accentColor }]}>
+                    <Icon name="camera-alt" size={16} color="#fff" />
                   </View>
                 )}
               </TouchableOpacity>
             </View>
 
             {!localEditMode && (
-              <Text style={[styles.profileName, { color: t.text }]}>
-                {localFullName || 'User Name'}
+              <>
+                <Text style={[styles.heroName, { color: t.text }]}>
+                  {localFullName || 'User Name'}
+                </Text>
+                <Text style={[styles.heroUsername, { color: t.textSecondary || t.secondaryText }]}>
+                  @{localUsername || 'username'}
+                </Text>
+
+                {/* Info Badges Row */}
+                {user && (
+                  <View style={styles.badgesRow}>
+                    <InfoBadge
+                      icon="calendar-today"
+                      label="Member since"
+                      value={formatDate(user?.createdAt)}
+                    />
+                    <InfoBadge
+                      icon="verified-user"
+                      label="Status"
+                      value="Active"
+                      valueColor={t.success || '#22C55E'}
+                    />
+                  </View>
+                )}
+              </>
+            )}
+
+            {localEditMode && (
+              <Text style={[styles.editHint, { color: t.textSecondary || t.secondaryText }]}>
+                Tap avatar to change photo
               </Text>
             )}
           </View>
 
-          {/* Profile Fields Section */}
-          <View style={[styles.fieldsSection, { backgroundColor: t.cardBg }]}>
-            {/* Full Name Field */}
-            <View style={[styles.fieldContainer, styles.firstField]}>
-              <View style={styles.fieldLabelContainer}>
-                <Icon name="person" size={20} color={t.iconColor} />
-                <Text style={[styles.fieldLabel, { color: t.labelText || t.textSecondary }]}>
-                  Full Name
-                </Text>
-              </View>
-              {localEditMode ? (
-                <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                  <TextInput
-                    style={[styles.input, { color: t.text }]}
-                    value={localFullName}
-                    onChangeText={setLocalFullName}
-                    placeholder="Enter your full name"
-                    placeholderTextColor={t.placeholder || t.textSecondary}
-                  />
-                </View>
-              ) : (
-                <Text style={[styles.fieldValue, { color: t.text }]}>
-                  {localFullName || 'Not set'}
-                </Text>
-              )}
-            </View>
+          {/* ── Fields Card ── */}
+          <View style={[styles.card, { backgroundColor: t.cardBg }]}>
+            <Text style={[styles.cardLabel, { color: t.textSecondary || t.secondaryText }]}>
+              ACCOUNT DETAILS
+            </Text>
 
-            {/* Username Field */}
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldLabelContainer}>
-                <Icon name="alternate-email" size={20} color={t.iconColor} />
-                <Text style={[styles.fieldLabel, { color: t.labelText || t.textSecondary }]}>
-                  Username
-                </Text>
-              </View>
-              {localEditMode ? (
-                <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                  <TextInput
-                    style={[styles.input, { color: t.text }]}
-                    value={localUsername}
-                    onChangeText={setLocalUsername}
-                    placeholder="username"
-                    placeholderTextColor={t.placeholder || t.textSecondary}
-                    autoCapitalize="none"
-                  />
+            {[
+              { icon: 'person', label: 'Full Name', value: localFullName, setter: setLocalFullName, placeholder: 'Enter full name', keyboard: 'default', capitalize: 'words' },
+              { icon: 'alternate-email', label: 'Username', value: localUsername, setter: setLocalUsername, placeholder: 'username', keyboard: 'default', capitalize: 'none', prefix: '@' },
+              { icon: 'email', label: 'Email', value: localEmail, setter: setLocalEmail, placeholder: 'email@example.com', keyboard: 'email-address', capitalize: 'none' },
+            ].map((field, index, arr) => (
+              <View
+                key={field.label}
+                style={[
+                  styles.fieldRow,
+                  index < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: t.border + '55' },
+                ]}
+              >
+                <View style={[styles.fieldIconWrapper, { backgroundColor: darkTheme ? '#2a2a3a' : '#EEF2FF' }]}>
+                  <Icon name={field.icon} size={18} color={accentColor} />
                 </View>
-              ) : (
-                <Text style={[styles.fieldValue, { color: t.text }]}>
-                  @{localUsername || 'username'}
-                </Text>
-              )}
-            </View>
-
-            {/* Email Field */}
-            <View style={[styles.fieldContainer, styles.lastField]}>
-              <View style={styles.fieldLabelContainer}>
-                <Icon name="email" size={20} color={t.iconColor} />
-                <Text style={[styles.fieldLabel, { color: t.labelText || t.textSecondary }]}>
-                  Email
-                </Text>
-              </View>
-              {localEditMode ? (
-                <View style={[styles.inputWrapper, { borderColor: t.inputBorder || t.border }]}>
-                  <TextInput
-                    style={[styles.input, { color: t.text }]}
-                    value={localEmail}
-                    onChangeText={setLocalEmail}
-                    placeholder="Enter your email"
-                    placeholderTextColor={t.placeholder || t.textSecondary}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
+                <View style={styles.fieldContent}>
+                  <Text style={[styles.fieldLabel, { color: t.textSecondary || t.secondaryText }]}>
+                    {field.label}
+                  </Text>
+                  {localEditMode ? (
+                    <TextInput
+                      style={[styles.fieldInput, { color: t.text, borderBottomColor: accentColor + '66' }]}
+                      value={field.value}
+                      onChangeText={field.setter}
+                      placeholder={field.placeholder}
+                      placeholderTextColor={t.textSecondary}
+                      keyboardType={field.keyboard}
+                      autoCapitalize={field.capitalize}
+                    />
+                  ) : (
+                    <Text style={[styles.fieldValue, { color: t.text }]}>
+                      {field.prefix}{field.value || '—'}
+                    </Text>
+                  )}
                 </View>
-              ) : (
-                <Text style={[styles.fieldValue, { color: t.text }]}>
-                  {localEmail || 'email@example.com'}
-                </Text>
-              )}
-            </View>
+              </View>
+            ))}
           </View>
 
-          {/* Account Info Section */}
-          {!localEditMode && user && (
-            <View style={[styles.infoSection, { backgroundColor: t.cardBg }]}>
-              <View style={styles.infoRow}>
-                <Icon name="info" size={20} color={t.iconColor} />
-                <Text style={[styles.infoLabel, { color: t.labelText || t.textSecondary }]}>
-                  Member since:
-                </Text>
-                <Text style={[styles.infoValue, { color: t.text }]}>
-                  {formatDate(user?.createdAt)}
+          {/* ── Tips Card (edit mode only) ── */}
+          {localEditMode && (
+            <View style={[styles.card, { backgroundColor: t.cardBg }]}>
+              <View style={styles.tipsHeader}>
+                <Icon name="lightbulb" size={18} color="#F59E0B" />
+                <Text style={[styles.cardLabel, { color: t.textSecondary || t.secondaryText, marginBottom: 0, marginLeft: 6 }]}>
+                  TIPS
                 </Text>
               </View>
-
-              <View style={[styles.infoRow, styles.lastInfoRow]}>
-                <Icon name="verified-user" size={20} color={t.iconColor} />
-                <Text style={[styles.infoLabel, { color: t.labelText || t.textSecondary }]}>
-                  Account status:
-                </Text>
-                <Text style={[styles.infoValue, { color: t.success || '#4CAF50' }]}>
-                  Active
-                </Text>
-              </View>
+              {[
+                'Username: 3–20 characters, letters, numbers and underscores only.',
+                'Email must be a valid address format.',
+                'Tap the avatar to update your profile photo.',
+              ].map((tip, i) => (
+                <View key={i} style={styles.tipRow}>
+                  <View style={[styles.tipDot, { backgroundColor: accentColor }]} />
+                  <Text style={[styles.tipText, { color: t.textSecondary || t.secondaryText }]}>{tip}</Text>
+                </View>
+              ))}
             </View>
           )}
 
-          {/* Validation Tips (only in edit mode) */}
+          {/* ── Action Buttons (edit mode only) ── */}
           {localEditMode && (
-            <View style={[styles.tipsSection, { backgroundColor: t.cardBg }]}>
-              <Text style={[styles.tipsTitle, { color: t.text }]}>
-                <Icon name="info" size={16} color={t.iconColor} /> Tips
-              </Text>
-              <View style={styles.tipItem}>
-                <Icon name="circle" size={8} color={t.iconColor} style={styles.tipBullet} />
-                <Text style={[styles.tipText, { color: t.textSecondary }]}>
-                  Username must be 3-20 characters and can contain letters, numbers, and underscores
-                </Text>
-              </View>
-              <View style={styles.tipItem}>
-                <Icon name="circle" size={8} color={t.iconColor} style={styles.tipBullet} />
-                <Text style={[styles.tipText, { color: t.textSecondary }]}>
-                  Email must be a valid email address
-                </Text>
-              </View>
-              <View style={styles.tipItem}>
-                <Icon name="circle" size={8} color={t.iconColor} style={styles.tipBullet} />
-                <Text style={[styles.tipText, { color: t.textSecondary }]}>
-                  Tap the camera icon to change your profile picture
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Action Buttons for Edit Mode */}
-          {localEditMode && (
-            <View style={styles.actionButtonsContainer}>
+            <View style={styles.actionRow}>
               <TouchableOpacity
-                style={[styles.cancelButton, { 
-                  borderColor: t.inputBorder || t.border,
-                  backgroundColor: t.logoutBtnBg || '#33363a'
-                }]}
+                style={[styles.cancelBtn, { backgroundColor: t.cardBg, borderColor: t.border }]}
                 onPress={handleCancel}
               >
-                <Text style={[styles.cancelButtonText, { color: '#FFF' }]}>
-                  Cancel
-                </Text>
+                <Icon name="close" size={18} color={t.text} style={{ marginRight: 6 }} />
+                <Text style={[styles.cancelBtnText, { color: t.text }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  loading && styles.saveButtonDisabled,
-                  { backgroundColor: t.button || '#2563EB' }
-                ]}
+                style={[styles.saveBtn, { backgroundColor: accentColor }, loading && { opacity: 0.6 }]}
                 onPress={handleSave}
                 disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
-                )}
+                {loading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <>
+                    <Icon name="check" size={18} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={styles.saveBtnText}>Save Changes</Text>
+                  </>
+                }
               </TouchableOpacity>
             </View>
           )}
+
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 4,
+  headerIconBtn: {
+    width: 36, height: 36, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  headerButton: {
-    padding: 4,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+
   scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
-  },
-  profileImageSection: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 16,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  profileImageWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 15,
-  },
-  profileImageTouchable: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileImageLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#FFF',
-  },
-  profileImagePlaceholderLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
-  },
-  profileImageLargeText: {
-    color: '#FFF',
-    fontSize: 48,
-    fontWeight: 'bold',
-  },
-  profileCameraBadge: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginTop: 5,
-  },
-  fieldsSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  fieldContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  firstField: {
-    paddingTop: 16,
-  },
-  lastField: {
-    borderBottomWidth: 0,
-    paddingBottom: 16,
-  },
-  fieldLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  fieldValue: {
-    fontSize: 16,
-    marginLeft: 28,
-  },
-  inputWrapper: {
-    borderWidth: 1,
-    borderRadius: 10,
-    marginLeft: 28,
-  },
-  input: {
-    height: 44,
-    fontSize: 16,
-    paddingHorizontal: 12,
-  },
-  infoSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 20,
     padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    paddingBottom: 48,  // ← generous bottom padding ensures last element is reachable
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+
+  // Hero Card
+  heroCard: {
+    borderRadius: 20, alignItems: 'center',
+    marginBottom: 14, overflow: 'hidden',
+    elevation: 2, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8,
   },
-  lastInfoRow: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
+  heroStrip: { width: '100%', height: 56 },
+  avatarWrapper: { marginTop: -40, marginBottom: 12 },
+  avatar: {
+    width: 110, height: 110, borderRadius: 55,
+    borderWidth: 4, borderColor: '#fff',
   },
-  infoLabel: {
-    fontSize: 14,
-    marginLeft: 12,
-    marginRight: 8,
+  avatarPlaceholder: {
+    justifyContent: 'center', alignItems: 'center',
   },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
+  avatarInitial: { color: '#fff', fontSize: 44, fontWeight: '800' },
+  cameraBadge: {
+    position: 'absolute', bottom: 4, right: 4,
+    width: 32, height: 32, borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#fff',
   },
-  tipsSection: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 20,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+  heroName: { fontSize: 22, fontWeight: '700', marginBottom: 2 },
+  heroUsername: { fontSize: 14, marginBottom: 16 },
+  editHint: { fontSize: 13, paddingBottom: 20, marginTop: -4 },
+
+  // Info Badges
+  badgesRow: {
+    flexDirection: 'row', gap: 10,
+    paddingHorizontal: 16, paddingBottom: 20, width: '100%',
   },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+  infoBadge: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    gap: 8, padding: 10, borderRadius: 12,
   },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+  infoBadgeIcon: {
+    width: 32, height: 32, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
   },
-  tipBullet: {
-    marginTop: 6,
-    marginRight: 8,
+  infoBadgeLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
+  infoBadgeValue: { fontSize: 13, fontWeight: '600', marginTop: 1 },
+  infoBadgeText: {},
+
+  // Card
+  card: {
+    borderRadius: 20, padding: 16, marginBottom: 14,
+    elevation: 2, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8,
   },
-  tipText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+  cardLabel: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.1,
+    marginBottom: 14,
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginHorizontal: 16,
-    marginTop: 10,
+
+  // Field Row
+  fieldRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, gap: 12,
   },
-  cancelButton: {
-    flex: 1,
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  fieldIconWrapper: {
+    width: 36, height: 36, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  fieldContent: { flex: 1 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', marginBottom: 3 },
+  fieldValue: { fontSize: 15, fontWeight: '500' },
+  fieldInput: {
+    fontSize: 15, paddingVertical: 4,
+    borderBottomWidth: 1.5,
   },
-  saveButton: {
-    flex: 1,
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+
+  // Tips
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 },
+  tipDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  tipText: { flex: 1, fontSize: 13, lineHeight: 20 },
+
+  // Action Buttons
+  actionRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  cancelBtn: {
+    flex: 1, height: 50, borderRadius: 14, borderWidth: 1,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
   },
-  saveButtonDisabled: {
-    opacity: 0.5,
+  cancelBtnText: { fontSize: 15, fontWeight: '600' },
+  saveBtn: {
+    flex: 1, height: 50, borderRadius: 14,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4,
   },
-  saveButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });
 
 export default ProfileScreen;

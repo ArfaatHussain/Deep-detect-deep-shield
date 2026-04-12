@@ -29,15 +29,20 @@ const Dashboard = ({ navigation }) => {
 
   const t = getTheme(darkTheme);
 
-  useEffect(() => {
-    (async () => {
-      const currentUser = await loadUser();
-      setUser(currentUser);
-    })();
-  }, []);
+  // useEffect(() => {
+  //   (async () => {
+  //     const currentUser = await loadUser();
+  //     setUser(currentUser);
+  //   })();
+  // }, []);
 
   useFocusEffect(
     useCallback(() => {
+      const fetchUser = async () => {
+        const currentUser = await loadUser();
+        setUser(currentUser);
+      };
+      fetchUser();
       if (user?._id) {
         getUserHistory(user._id);
       }
@@ -327,16 +332,16 @@ const styles = StyleSheet.create({
   featureInfo: { flex: 1 },
   featureTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6, letterSpacing: 0.3 },
   featureDescription: { fontSize: 14, lineHeight: 20 },
-  
+
   // Updated Professional Analytics Styles
-  statsContainer: { 
-    padding: 20, 
-    borderRadius: 20, 
-    marginTop: 24, 
-    borderWidth: 1, 
-    shadowColor: '#020617', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowRadius: 12, 
+  statsContainer: {
+    padding: 20,
+    borderRadius: 20,
+    marginTop: 24,
+    borderWidth: 1,
+    shadowColor: '#020617',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
     elevation: 6,
   },
   statsHeader: {
@@ -357,8 +362,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  statsTitle: { 
-    fontSize: 18, 
+  statsTitle: {
+    fontSize: 18,
     fontWeight: '600',
   },
   periodBadge: {

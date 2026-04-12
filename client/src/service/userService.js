@@ -11,11 +11,17 @@ export const getHistory = async (userId) => {
 
 export const updateUser = async (userId, data) => {
   try {
-    return axios.patch(`${API_URL}/user/update/${userId}`, data);
+    const isFormData = data instanceof FormData;
+
+    return axios.patch(`${API_URL}/user/update/${userId}`, data, {
+      headers: {
+        ...(isFormData && { 'Content-Type': 'multipart/form-data' }),
+      },
+    });
   } catch (error) {
-    throw error
-  } 
-}
+    throw error;
+  }
+};
 
 export const deleteHistory = async (userId) => {
   try {
