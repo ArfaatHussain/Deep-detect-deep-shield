@@ -16,6 +16,7 @@ import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { detectVideo } from '../service/videoService';
+
 const VideoDetection = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
 
@@ -80,98 +81,125 @@ const VideoDetection = ({ navigation }) => {
     } catch (error) {
       console.error("Error analyzing video:", error);
       showToast('Failed to analyze video');
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: t.background }]}>
-      {/* Back Icon */}
-      <TouchableOpacity
-        style={[styles.backButton, { backgroundColor: t.cardBg }]}
-        onPress={() => navigation.goBack()}>
-        <Icon name="arrow-back" size={24} color={t.textPrimary} />
-      </TouchableOpacity>
-
-      <Text style={[styles.title, { color: t.textPrimary }]}>
-        Video Detection
-      </Text>
-
-      {/* Upload Area */}
-      <TouchableOpacity
-        style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-        onPress={selectVideo}>
-        {selectedVideo ? (
-          <Video
-            source={{ uri: selectedVideo.uri }}
-            style={styles.videoPreview}
-            useNativeControls
-            resizeMode="contain"
-            onError={() => Alert.alert('Error', 'Failed to load video')}
-          />
-        ) : (
-          <>
-            <Icon name="videocam-outline" size={50} color={t.uploadIcon} />
-            <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select a Video</Text>
-            <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
-          </>
-        )}
-      </TouchableOpacity>
-
-      {/* Detect Button */}
-      <TouchableOpacity
-        style={[
-          styles.detectButton,
-          (!selectedVideo || loading) && { backgroundColor: t.detectButtonDisabled },
-        ]}
-        onPress={analyzeVideo}
-        disabled={!selectedVideo || loading}>
-        {loading ? <ActivityIndicator color="#F1F5F9" /> : <Text style={styles.detectButtonText}>Detect Deepfake</Text>}
-      </TouchableOpacity>
-
-      {/* Result */}
-      {result && (
-        <View
-          style={[
-            styles.resultContainer,
-            result.prediction.toLowerCase() === "fake"
-              ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
-              : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
-          ]}>
-          <Icon
-            name={result.prediction.toLowerCase() === "fake" ? 'warning-outline' : 'checkmark-circle-outline'}
-            size={40}
-            color={result.prediction.toLowerCase() === "fake" ? '#EF4444' : '#10B981'}
-          />
-          <Text style={styles.resultTitle}>
-            {result.prediction?.toLowerCase() === "fake" ? 'Potential Deepfake Detected' : 'Authentic Video'}
-          </Text>
-          <Text style={styles.resultConfidence}>
-            Probability: {result.probability}%
-          </Text>
-          <Text style={styles.resultDetails}>{result.explanation_text}</Text>
-        </View>
-      )}
-
-      {/* Info Section */}
-      <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-        <Text style={[styles.infoTitle, { color: t.textPrimary }]}>How it works:</Text>
-        <Text style={[styles.infoText, { color: t.textSecondary }]}>
-          • Detects frame inconsistencies{'\n'}
-          • Analyzes audio-visual sync{'\n'}
-          • Checks for compression artifacts{'\n'}
-          • Examines metadata
-        </Text>
+    <View style={[styles.container, { backgroundColor: t.background }]}>
+      {/* Header - Updated to match Privacy Policy style */}
+      <View style={[styles.header, { backgroundColor: t.background, borderBottomColor: t.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: t.cardBg }]}
+        >
+          <Icon name="arrow-back" size={20} color={t.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Video Detection</Text>
+        <View style={{ width: 36 }} />
       </View>
-    </ScrollView>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Upload Area */}
+        <TouchableOpacity
+          style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+          onPress={selectVideo}>
+          {selectedVideo ? (
+            <Video
+              source={{ uri: selectedVideo.uri }}
+              style={styles.videoPreview}
+              useNativeControls
+              resizeMode="contain"
+              onError={() => Alert.alert('Error', 'Failed to load video')}
+            />
+          ) : (
+            <>
+              <Icon name="videocam-outline" size={50} color={t.uploadIcon} />
+              <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select a Video</Text>
+              <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Detect Button */}
+        <TouchableOpacity
+          style={[
+            styles.detectButton,
+            (!selectedVideo || loading) && { backgroundColor: t.detectButtonDisabled },
+          ]}
+          onPress={analyzeVideo}
+          disabled={!selectedVideo || loading}>
+          {loading ? <ActivityIndicator color="#F1F5F9" /> : <Text style={styles.detectButtonText}>Detect Deepfake</Text>}
+        </TouchableOpacity>
+
+        {/* Result */}
+        {result && (
+          <View
+            style={[
+              styles.resultContainer,
+              result.prediction?.toLowerCase() === "fake"
+                ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
+                : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
+            ]}>
+            <Icon
+              name={result.prediction?.toLowerCase() === "fake" ? 'warning-outline' : 'checkmark-circle-outline'}
+              size={40}
+              color={result.prediction?.toLowerCase() === "fake" ? '#EF4444' : '#10B981'}
+            />
+            <Text style={styles.resultTitle}>
+              {result.prediction?.toLowerCase() === "fake" ? 'Potential Deepfake Detected' : 'Authentic Video'}
+            </Text>
+            <Text style={styles.resultConfidence}>
+              Probability: {result.probability}%
+            </Text>
+            <Text style={styles.resultDetails}>{result.explanation_text}</Text>
+          </View>
+        )}
+
+        {/* Info Section */}
+        <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
+          <Text style={[styles.infoTitle, { color: t.textPrimary }]}>How it works:</Text>
+          <Text style={[styles.infoText, { color: t.textSecondary }]}>
+            • Detects frame inconsistencies{'\n'}
+            • Analyzes audio-visual sync{'\n'}
+            • Checks for compression artifacts{'\n'}
+            • Examines metadata
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
-
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  backButton: { position: 'absolute', top: 10, left: 10, zIndex: 10, padding: 10, borderRadius: 20 },
+  container: { flex: 1 },
+  // New header styles matching Privacy Policy
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  // Rest of the styles remain exactly the same
   title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 32, marginTop: 85, letterSpacing: 0.5 },
   uploadArea: { borderWidth: 2, borderStyle: 'dashed', borderRadius: 16, padding: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 24, shadowColor: '#020617', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   uploadText: { fontSize: 18, fontWeight: '600', marginTop: 16, letterSpacing: 0.3 },

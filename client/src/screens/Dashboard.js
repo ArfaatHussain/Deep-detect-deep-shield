@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   avatarImage: { width: 70, height: 70, borderRadius: 35, borderWidth: 2 },
   avatarPlaceholder: { width: 70, height: 70, justifyContent: 'center', alignItems: 'center' },
   welcome: { fontSize: 16, letterSpacing: 0.3 },
-  userName: { fontSize: 22, fontWeight: 'bold', letterSpacing: 0.5 },
+  userName: { fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 },
   logoutButton: { justifyContent: 'center', alignItems: 'center', padding: 12, borderRadius: 8 },
   content: { flex: 1, padding: 20 },
   sectionTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 24, letterSpacing: 0.5 },

@@ -82,13 +82,16 @@ const ChangePasswordScreen = ({ navigation }) => {
       style={[styles.container, { backgroundColor: t.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: t.headerBorder || t.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color={t.headerText || t.text} />
+      {/* Header - Updated to match Privacy Policy style */}
+      <View style={[styles.header, { backgroundColor: t.background, borderBottomColor: t.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: t.cardBg }]}
+        >
+          <Icon name="arrow-back" size={20} color={t.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: t.headerText || t.text }]}>Change Password</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.headerTitle, { color: t.text }]}>Change Password</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -211,12 +214,17 @@ const ChangePasswordScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // Header - Updated styles
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1,
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1,
   },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: '600' },
+  backButton: {
+    width: 36, height: 36, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  // Rest of the styles remain exactly the same
   scrollContent: { padding: 20, paddingBottom: 40 },
   requirementsCard: {
     flexDirection: 'row', alignItems: 'center', padding: 14,

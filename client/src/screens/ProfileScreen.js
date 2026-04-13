@@ -166,7 +166,7 @@ const ProfileScreen = ({ route, navigation }) => {
           {/* ── Avatar Hero Card ── */}
           <View style={[styles.heroCard, { backgroundColor: t.cardBg }]}>
             {/* Decorative top strip */}
-            <View style={[styles.heroStrip, { backgroundColor: accentColor }]} />
+            <View style={[styles.heroStrip]} />
 
             <View style={styles.avatarWrapper}>
               <TouchableOpacity

@@ -74,98 +74,115 @@ const VerifyScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: t.background }]}>
-      {/* Back Button */}
-      <TouchableOpacity
-        style={[styles.backButton, { backgroundColor: t.cardBg }]}
-        onPress={() => navigation.goBack()}
-      >
-        <Icon name="arrow-back" size={24} color={t.textPrimary} />
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: t.background }]}>
+      {/* Header - Updated to match Privacy Policy style */}
+      <View style={[styles.header, { backgroundColor: t.background, borderBottomColor: t.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: t.cardBg }]}
+        >
+          <Icon name="arrow-back" size={20} color={t.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Verify Image Authenticity</Text>
+        <View style={{ width: 36 }} />
+      </View>
 
-      <Text style={[styles.title, { color: t.textPrimary }]}>Verify Image Authenticity</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Upload Area */}
+        <TouchableOpacity
+          style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+          onPress={selectImage}
+        >
+          {image ? (
+            <Image
+              source={{ uri: image.uri }}
+              style={styles.dynamicPreviewImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <>
+              <Icon name="cloud-upload-outline" size={50} color={t.iconColor} />
+              <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select Image</Text>
+              <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-      {/* Upload Area */}
-      <TouchableOpacity
-        style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-        onPress={selectImage}
-      >
-        {image ? (
-          <Image
-            source={{ uri: image.uri }}
-            style={styles.dynamicPreviewImage}
-            resizeMode="contain"
-          />
-        ) : (
-          <>
-            <Icon name="cloud-upload-outline" size={50} color={t.iconColor} />
-            <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select Image</Text>
-            <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
-          </>
-        )}
-      </TouchableOpacity>
+        {/* Verify Button */}
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: image ? '#2563EB' : '#475569' }]}
+          onPress={verifyImage}
+          disabled={!image || loading}
+        >
+          {loading ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator color="#F1F5F9" style={{ marginRight: 10 }} />
+              <Text style={[styles.buttonText, { color: '#F1F5F9' }]}>Verifying...</Text>
+            </View>
+          ) : (
+            <Text style={[styles.buttonText, { color: '#F1F5F9' }]}>Verify Image</Text>
+          )}
+        </TouchableOpacity>
 
-      {/* Verify Button */}
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: image ? '#2563EB' : '#475569' }]}
-        onPress={verifyImage}
-        disabled={!image || loading}
-      >
-        {loading ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color="#F1F5F9" style={{ marginRight: 10 }} />
-            <Text style={[styles.buttonText, { color: '#F1F5F9' }]}>Verifying...</Text>
+        {/* Result Card */}
+        {result && (
+          <View style={[styles.resultCard, {
+            backgroundColor: !result.watermark_matched ? '#FEE2E2' : '#D1FAE5',
+            borderColor: !result.watermark_matched ? '#FCA5A5' : '#34D399',
+          }]}>
+            <Icon
+              name={!result.watermark_matched ? 'close-circle' : 'checkmark-circle'}
+              size={40}
+              color={!result.watermark_matched ? '#B91C1C' : '#047857'}
+              style={{ marginBottom: 10 }}
+            />
+            <Text style={[styles.resultCardText, { color: !result.watermark_matched ? '#B91C1C' : '#047857' }]}>
+              {!result.watermark_matched ? 'Tampered (Watermark Missing)' : 'Authentic (Watermark Found)'}
+            </Text>
+
+            {/* Extra details */}
+            <Text style={{ marginTop: 8, color: '#6B7280', fontSize: 13 }}>
+              Watermark Match: {result.watermark_matched ? 'Yes' : 'No'}
+            </Text>
+            {/* <Text style={{ color: '#6B7280', fontSize: 13 }}>
+              Verified At: {new Date(result.createdAt).toLocaleString()}
+            </Text> */}
           </View>
-        ) : (
-          <Text style={[styles.buttonText, { color: '#F1F5F9' }]}>Verify Image</Text>
         )}
-      </TouchableOpacity>
-
-      {/* Result Card */}
-      {result && (
-        <View style={[styles.resultCard, {
-          backgroundColor: !result.watermark_matched ? '#FEE2E2' : '#D1FAE5',
-          borderColor: !result.watermark_matched ? '#FCA5A5' : '#34D399',
-        }]}>
-          <Icon
-            name={!result.watermark_matched ? 'close-circle' : 'checkmark-circle'}
-            size={40}
-            color={!result.watermark_matched ? '#B91C1C' : '#047857'}
-            style={{ marginBottom: 10 }}
-          />
-          <Text style={[styles.resultCardText, { color: !result.watermark_matched ? '#B91C1C' : '#047857' }]}>
-            {!result.watermark_matched ? 'Tampered (Watermark Missing)' : 'Authentic (Watermark Found)'}
-          </Text>
-
-          {/* Extra details */}
-          <Text style={{ marginTop: 8, color: '#6B7280', fontSize: 13 }}>
-            Watermark Match: {result.watermark_matched ? 'Yes' : 'No'}
-          </Text>
-          {/* <Text style={{ color: '#6B7280', fontSize: 13 }}>
-            Verified At: {new Date(result.createdAt).toLocaleString()}
-          </Text> */}
-        </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
-
 const styles = StyleSheet.create({
-  container: { padding: 20, alignItems: 'center', flexGrow: 1 },
-  backButton: {
-    position: 'absolute',
-    top: 35,
-    left: 20,
-    padding: 10,
-    borderRadius: 25,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+  container: { flex: 1 },
+  // New header styles matching Privacy Policy
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  scrollContent: {
+    padding: 20,
+    alignItems: 'center',
+    flexGrow: 1,
+  },
+  // Rest of the styles remain exactly the same
   title: { fontSize: 22, fontWeight: 'bold', marginTop: 80, marginBottom: 20, textAlign: 'center', letterSpacing: 0.5 },
   uploadArea: {
     borderWidth: 2,
