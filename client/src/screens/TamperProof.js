@@ -11,80 +11,94 @@ import { getTheme } from '../context/theme';
 
 const TamperProof = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
-  const t =getTheme(darkTheme);
+  const t = getTheme(darkTheme);
 
   return (
     <View style={[styles.container, { backgroundColor: t.background }]}>
-      {/* Back Icon */}
-      <TouchableOpacity
-        style={[styles.backButton, { backgroundColor: t.cardBg }]}
-        onPress={() => navigation.navigate('Dashboard')}
-      >
-        <Icon name="arrow-back" size={24} color={t.textPrimary} />
-      </TouchableOpacity>
-
-      <Text style={[styles.title, { color: t.textPrimary }]}>
-        Tamper-Proof Media
-      </Text>
-
-      {/* Options: Protect or Verify */}
-      <View style={styles.optionsContainer}>
-        {/* Protect Image */}
+      {/* Header - Updated to match Privacy Policy style */}
+      <View style={[styles.header, { backgroundColor: t.background, borderBottomColor: t.border }]}>
         <TouchableOpacity
-          style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-          onPress={() => navigation.navigate('ProtectScreen')}
+          onPress={() => navigation.navigate('Dashboard')}
+          style={[styles.backButton, { backgroundColor: t.cardBg }]}
         >
-          <Icon name="shield-checkmark-outline" size={40} color={t.iconColor} />
-          <Text style={[styles.optionText, { color: t.textPrimary }]}>
-            Protect Image
-          </Text>
+          <Icon name="arrow-back" size={20} color={t.text} />
         </TouchableOpacity>
-
-        {/* Verify Image */}
-        <TouchableOpacity
-          style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-          onPress={() => navigation.navigate('VerifyScreen')}
-        >
-          <Icon name="checkmark-done-outline" size={40} color={t.iconColor} />
-          <Text style={[styles.optionText, { color: t.textPrimary }]}>
-            Verify Image
-          </Text>
-        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Tamper-Proof Media</Text>
+        <View style={{ width: 36 }} />
       </View>
 
-      {/* Info Section */}
-      <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-        <Text style={[styles.infoTitle, { color: t.textPrimary }]}>
-          What this module will do:
-        </Text>
-        <Text style={[styles.infoText, { color: t.textSecondary }]}>
-          • Embed digital watermarks{'\n'}
-          • Add secure metadata{'\n'}
-          • Prevent unauthorized editing{'\n'}
-          • Provide tamper detection
-        </Text>
+      <View style={styles.content}>
+        {/* Options: Protect or Verify */}
+        <View style={styles.optionsContainer}>
+          {/* Protect Image */}
+          <TouchableOpacity
+            style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+            onPress={() => navigation.navigate('ProtectScreen')}
+          >
+            <Icon name="shield-checkmark-outline" size={40} color={t.iconColor} />
+            <Text style={[styles.optionText, { color: t.textPrimary }]}>
+              Protect Image
+            </Text>
+          </TouchableOpacity>
+
+          {/* Verify Image */}
+          <TouchableOpacity
+            style={[styles.optionButton, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+            onPress={() => navigation.navigate('VerifyScreen')}
+          >
+            <Icon name="checkmark-done-outline" size={40} color={t.iconColor} />
+            <Text style={[styles.optionText, { color: t.textPrimary }]}>
+              Verify Image
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Info Section */}
+        <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
+          <Text style={[styles.infoTitle, { color: t.textPrimary }]}>
+            What this module will do:
+          </Text>
+          <Text style={[styles.infoText, { color: t.textSecondary }]}>
+            • Embed digital watermarks{'\n'}
+            • Add secure metadata{'\n'}
+            • Prevent unauthorized editing{'\n'}
+            • Provide tamper detection
+          </Text>
+        </View>
       </View>
     </View>
   );
 };
 
-
-
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, alignItems: 'center' },
-  backButton: {
-    position: 'absolute',
-    top: 35,
-    left: 20,
-    zIndex: 10,
-    padding: 10,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+  container: { flex: 1 },
+  // New header styles matching Privacy Policy
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+  },
+  // Rest of the styles remain exactly the same
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -98,6 +112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginBottom: 24,
+    marginTop: 20,
   },
   optionButton: {
     flex: 1,

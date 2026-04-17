@@ -279,7 +279,7 @@ const SettingsScreen = ({ navigation }) => {
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
-                style={[styles.deleteModalButton, styles.cancelButton, { borderColor: t.inputBorder || t.border }]}
+                style={[styles.deleteModalButton, styles.cancelButton, { borderColor: t.inputBorder || t.border,backgroundColor: t.logoutBtnBg  }]}
                 onPress={() => setDeleteModalVisible(false)}
                 disabled={loading}
               >
@@ -309,10 +309,10 @@ const SettingsScreen = ({ navigation }) => {
             </Text>
             <View style={styles.logoutModalButtons}>
               <TouchableOpacity
-                style={[styles.logoutCancelButton, { borderColor: t.inputBorder || t.border, backgroundColor: t.logoutBtnBg || '#33363a' }]}
+                style={[styles.logoutCancelButton, { borderColor: t.inputBorder || t.border, backgroundColor: t.logoutBtnBg }]}
                 onPress={() => setLogoutModalVisible(false)}
               >
-                <Text style={[styles.logoutCancelButtonText, { color: '#FFF' }]}>Cancel</Text>
+                <Text style={[styles.logoutCancelButtonText, { color: darkTheme ? '#FFF' : '#000' }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.logoutConfirmButton, { backgroundColor: t.error || '#a01616' }]}

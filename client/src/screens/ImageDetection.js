@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTheme } from '../context/theme';
 import { API_URL } from '../../config';
 import * as MediaLibrary from 'expo-media-library';
+
 const ImageDetection = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [result, setResult] = useState(null);
@@ -100,8 +101,8 @@ const ImageDetection = ({ navigation }) => {
     try {
       const fileName = photoUrl.replace(/^.*[\\\/]/, '');
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      console.log("File name: ",fileName)
-      console.log("File url: ",fileUri)
+      console.log("File name: ", fileName)
+      console.log("File url: ", fileUri)
       const { uri } = await FileSystem.downloadAsync(`${photoUrl}`, fileUri);
       const asset = await MediaLibrary.createAssetAsync(uri);
       return asset.uri;
@@ -137,111 +138,116 @@ const ImageDetection = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: t.background }]}>
-      {/* Back Button */}
-      <TouchableOpacity
-        style={[styles.backButton, { backgroundColor: darkTheme ? 'rgba(30,41,59,0.8)' : t.cardBg }]}
-        onPress={() => navigation.goBack()}>
-        <Icon name="arrow-back" size={24} color={t.textPrimary} />
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: t.background }]}>
+      {/* Header - Updated to match Privacy Policy style */}
+      <View style={[styles.header, { backgroundColor: t.background, borderBottomColor: t.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: t.cardBg }]}
+        >
+          <Icon name="arrow-back" size={20} color={t.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Image Detection</Text>
+        <View style={{ width: 36 }} />
+      </View>
 
-      <Text style={[styles.title, { color: t.textPrimary }]}>Image Detection</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Upload Area */}
+        <TouchableOpacity
+          style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
+          onPress={selectImage}>
+          {selectedImage ? (
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={styles.imagePreview}
+              resizeMode="contain"
+              onError={() => showToast('Failed to load image')}
+            />
+          ) : (
+            <>
+              <Icon name="cloud-upload-outline" size={50} color={t.uploadIcon} />
+              <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select an Image</Text>
+              <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-      {/* Upload Area */}
-      <TouchableOpacity
-        style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-        onPress={selectImage}>
-        {selectedImage ? (
-          <Image
-            source={{ uri: selectedImage.uri }}
-            style={styles.imagePreview}
-            resizeMode="contain"
-            onError={() => showToast('Failed to load image')}
-          />
-        ) : (
+        {/* Analyze Button */}
+        <TouchableOpacity
+          style={[
+            styles.detectButton,
+            (!selectedImage || loading) && { backgroundColor: t.detectButtonDisabled },
+          ]}
+          onPress={analyzeImage}
+          disabled={!selectedImage || loading}>
+          {loading ? <ActivityIndicator color="#F1F5F9" /> : <Text style={styles.detectButtonText}>Detect Deepfake</Text>}
+        </TouchableOpacity>
+
+        {/* Results */}
+        {result && (
           <>
-            <Icon name="cloud-upload-outline" size={50} color={t.uploadIcon} />
-            <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select an Image</Text>
-            <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
+            <View
+              style={[
+                styles.resultContainer,
+                result.classification.toLowerCase().includes("fake")
+                  ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
+                  : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
+              ]}>
+              <Icon
+                name={result.classification.toLowerCase().includes("fake") ? 'warning-outline' : 'checkmark-circle-outline'}
+                size={40}
+                color={result.classification.toLowerCase().includes("fake") ? '#EF4444' : '#10B981'}
+              />
+              <Text style={styles.resultTitle}>Classification: {result.classification}</Text>
+              <Text style={styles.resultConfidence}>Confidence Score: {result.confidence}%</Text>
+              <Text style={styles.resultDetails}>{result.explanation}</Text>
+            </View>
+
+            {result.analyzedImage && result.classification.toLowerCase().includes("fake") && (
+              <View style={[styles.highlightContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
+                <Text style={[styles.infoTitle, { color: t.textPrimary }]}>Analyzed Image</Text>
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: `${result.analyzedImage}` }}
+                    style={styles.highlightedImage}
+                    resizeMode="contain"
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.detectButton,
+                    { backgroundColor: t.downloadButtonBg, marginTop: 16 },
+                    downloadLoading && { backgroundColor: t.detectButtonDisabled },
+                  ]}
+                  onPress={downloadImage}
+                  disabled={downloadLoading}>
+                  {downloadLoading ? (
+                    <View style={styles.downloadButtonContent}>
+                      <Text style={styles.detectButtonText}>Downloading...</Text>
+                      <ActivityIndicator color="#F1F5F9" size="small" />
+                    </View>
+                  ) : (
+                    <Text style={styles.detectButtonText}>Download Analyzed Image</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
-      </TouchableOpacity>
 
-      {/* Analyze Button */}
-      <TouchableOpacity
-        style={[
-          styles.detectButton,
-          (!selectedImage || loading) && { backgroundColor: t.detectButtonDisabled },
-        ]}
-        onPress={analyzeImage}
-        disabled={!selectedImage || loading}>
-        {loading ? <ActivityIndicator color="#F1F5F9" /> : <Text style={styles.detectButtonText}>Detect Deepfake</Text>}
-      </TouchableOpacity>
-
-      {/* Results */}
-      {result && (
-        <>
-          <View
-            style={[
-              styles.resultContainer,
-              result.classification.toLowerCase().includes("fake")
-                ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
-                : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
-            ]}>
-            <Icon
-              name={result.classification.toLowerCase().includes("fake") ? 'warning-outline' : 'checkmark-circle-outline'}
-              size={40}
-              color={result.classification.toLowerCase().includes("fake") ? '#EF4444' : '#10B981'}
-            />
-            <Text style={styles.resultTitle}>Classification: {result.classification}</Text>
-            <Text style={styles.resultConfidence}>Confidence Score: {result.confidence}%</Text>
-            <Text style={styles.resultDetails}>{result.explanation}</Text>
-          </View>
-
-          {result.analyzedImage && result.classification.toLowerCase().includes("fake") && (
-            <View style={[styles.highlightContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-              <Text style={[styles.infoTitle, { color: t.textPrimary }]}>Analyzed Image</Text>
-              <View style={styles.imageWrapper}>
-                <Image
-                  source={{ uri: `${result.analyzedImage}` }}
-                  style={styles.highlightedImage}
-                  resizeMode="contain"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.detectButton,
-                  { backgroundColor: t.downloadButtonBg, marginTop: 16 },
-                  downloadLoading && { backgroundColor: t.detectButtonDisabled },
-                ]}
-                onPress={downloadImage}
-                disabled={downloadLoading}>
-                {downloadLoading ? (
-                  <View style={styles.downloadButtonContent}>
-                    <Text style={styles.detectButtonText}>Downloading...</Text>
-                    <ActivityIndicator color="#F1F5F9" size="small" />
-                  </View>
-                ) : (
-                  <Text style={styles.detectButtonText}>Download Analyzed Image</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
-      )}
-
-      {/* Info Section */}
-      <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-        <Text style={[styles.infoTitle, { color: t.textPrimary }]}>How it works:</Text>
-        <Text style={[styles.infoText, { color: t.textSecondary }]}>
-          • Analyzes facial inconsistencies{'\n'}
-          • Checks for digital artifacts{'\n'}
-          • Examines lighting and shadows{'\n'}
-          • Verifies image metadata
-        </Text>
-      </View>
-    </ScrollView>
+        {/* Info Section */}
+        <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
+          <Text style={[styles.infoTitle, { color: t.textPrimary }]}>How it works:</Text>
+          <Text style={[styles.infoText, { color: t.textSecondary }]}>
+            • Analyzes facial inconsistencies{'\n'}
+            • Checks for digital artifacts{'\n'}
+            • Examines lighting and shadows{'\n'}
+            • Verifies image metadata
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -251,8 +257,19 @@ const themeStyles = (darkTheme) => ({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  backButton: { position: 'absolute', top: 10, left: 10, zIndex: 10, padding: 10, borderRadius: 20 },
+  container: { flex: 1 },
+  // New header styles matching Privacy Policy
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 36, height: 36, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  // Rest of the styles remain exactly the same
   title: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 32, marginTop: 85 },
   uploadArea: { borderWidth: 2, borderStyle: 'dashed', borderRadius: 16, padding: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 24, shadowColor: '#020617', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   uploadText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
