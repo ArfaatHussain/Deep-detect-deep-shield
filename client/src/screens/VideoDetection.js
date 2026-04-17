@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
-import { Video } from 'expo-av';
 import { ThemeContext } from '../context/ThemeContext';
 import Toast from 'react-native-simple-toast';
 import { getTheme } from '../context/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { detectVideo } from '../service/videoService';
+import Video from 'react-native-video';
+
 const VideoDetection = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
 
@@ -106,7 +107,8 @@ const VideoDetection = ({ navigation }) => {
           <Video
             source={{ uri: selectedVideo.uri }}
             style={styles.videoPreview}
-            useNativeControls
+            paused={true}
+            controls={true}
             resizeMode="contain"
             onError={() => Alert.alert('Error', 'Failed to load video')}
           />
@@ -151,6 +153,17 @@ const VideoDetection = ({ navigation }) => {
             Probability: {result.probability}%
           </Text>
           <Text style={styles.resultDetails}>{result.explanation_text}</Text>
+
+
+           {result.annotated_video_url && (
+      <Video
+        source={{ uri: result.annotated_video_url }}
+        style={styles.historyVideo}
+        controls={true}
+        paused={false} // auto play (change to true if needed)
+        resizeMode="contain"
+      />
+    )}
         </View>
       )}
 
@@ -186,6 +199,12 @@ const styles = StyleSheet.create({
   infoContainer: { padding: 20, marginBottom: 60, borderRadius: 16, borderWidth: 1, shadowColor: '#020617', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   infoTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, letterSpacing: 0.3 },
   infoText: { fontSize: 14, lineHeight: 22, letterSpacing: 0.3 },
+  historyVideo: {
+  width: '100%',
+  height: 250,
+  marginTop: 16,
+  borderRadius: 12,
+},
 });
 
 export default VideoDetection;
