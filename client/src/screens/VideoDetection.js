@@ -16,6 +16,8 @@ import { getTheme } from '../context/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { detectVideo } from '../service/videoService';
 import Video from 'react-native-video';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 
 const VideoDetection = ({ navigation }) => {
   const { darkTheme } = useContext(ThemeContext);
@@ -86,8 +88,25 @@ const VideoDetection = ({ navigation }) => {
     }
   };
 
+  const downloadVideo = async (videoUrl) => {
+    try {
+      const fileName = videoUrl.replace(/^.*[\\\/]/, '');
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      console.log("File name: ", fileName)
+      console.log("File url: ", fileUri)
+      const { uri } = await FileSystem.downloadAsync(`${videoUrl}`, fileUri);
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      showToast('Annotated video saved to gallery');
+      return asset.uri;
+    } catch (err) {
+      console.error('Download video error:', err);
+      showToast('Failed to download video');
+      return null;
+    }
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: t.background }]}>
+    <ScrollView style={[styles.container, { backgroundColor: t.background }]}>
       {/* Back Icon */}
       <TouchableOpacity
         style={[styles.backButton, { backgroundColor: t.cardBg }]}
@@ -155,15 +174,24 @@ const VideoDetection = ({ navigation }) => {
           <Text style={styles.resultDetails}>{result.explanation_text}</Text>
 
 
-           {result.annotated_video_url && (
-      <Video
-        source={{ uri: result.annotated_video_url }}
-        style={styles.historyVideo}
-        controls={true}
-        paused={false} // auto play (change to true if needed)
-        resizeMode="contain"
-      />
-    )}
+          {result.annotated_video_url && (
+            <Video
+              source={{ uri: result.annotated_video_url }}
+              style={styles.historyVideo}
+              controls={true}
+              paused={false} // auto play (change to true if needed)
+              resizeMode="contain"
+            />
+          )}
+
+          // Download button for annotated video
+          {result.annotated_video_url && (
+            <TouchableOpacity
+              style={[styles.detectButton, { marginTop: 16 }]}
+              onPress={() => downloadVideo(result.annotated_video_url)}>
+              <Text style={styles.detectButtonText}>Download Annotated Video</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -177,76 +205,7 @@ const VideoDetection = ({ navigation }) => {
           • Examines metadata
         </Text>
       </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Upload Area */}
-        <TouchableOpacity
-          style={[styles.uploadArea, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}
-          onPress={selectVideo}>
-          {selectedVideo ? (
-            <Video
-              source={{ uri: selectedVideo.uri }}
-              style={styles.videoPreview}
-              useNativeControls
-              resizeMode="contain"
-              onError={() => Alert.alert('Error', 'Failed to load video')}
-            />
-          ) : (
-            <>
-              <Icon name="videocam-outline" size={50} color={t.uploadIcon} />
-              <Text style={[styles.uploadText, { color: t.textPrimary }]}>Select a Video</Text>
-              <Text style={[styles.uploadSubtext, { color: t.textSecondary }]}>Tap to choose from gallery</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* Detect Button */}
-        <TouchableOpacity
-          style={[
-            styles.detectButton,
-            (!selectedVideo || loading) && { backgroundColor: t.detectButtonDisabled },
-          ]}
-          onPress={analyzeVideo}
-          disabled={!selectedVideo || loading}>
-          {loading ? <ActivityIndicator color="#F1F5F9" /> : <Text style={styles.detectButtonText}>Detect Deepfake</Text>}
-        </TouchableOpacity>
-
-        {/* Result */}
-        {result && (
-          <View
-            style={[
-              styles.resultContainer,
-              result.prediction?.toLowerCase() === "fake"
-                ? { backgroundColor: t.resultFakeBg, borderColor: t.resultFakeBorder }
-                : { backgroundColor: t.resultRealBg, borderColor: t.resultRealBorder },
-            ]}>
-            <Icon
-              name={result.prediction?.toLowerCase() === "fake" ? 'warning-outline' : 'checkmark-circle-outline'}
-              size={40}
-              color={result.prediction?.toLowerCase() === "fake" ? '#EF4444' : '#10B981'}
-            />
-            <Text style={styles.resultTitle}>
-              {result.prediction?.toLowerCase() === "fake" ? 'Potential Deepfake Detected' : 'Authentic Video'}
-            </Text>
-            <Text style={styles.resultConfidence}>
-              Probability: {result.probability}%
-            </Text>
-            <Text style={styles.resultDetails}>{result.explanation_text}</Text>
-          </View>
-        )}
-
-        {/* Info Section */}
-        <View style={[styles.infoContainer, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-          <Text style={[styles.infoTitle, { color: t.textPrimary }]}>How it works:</Text>
-          <Text style={[styles.infoText, { color: t.textSecondary }]}>
-            • Detects frame inconsistencies{'\n'}
-            • Analyzes audio-visual sync{'\n'}
-            • Checks for compression artifacts{'\n'}
-            • Examines metadata
-          </Text>
-        </View>
-      </ScrollView>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -293,11 +252,11 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, letterSpacing: 0.3 },
   infoText: { fontSize: 14, lineHeight: 22, letterSpacing: 0.3 },
   historyVideo: {
-  width: '100%',
-  height: 250,
-  marginTop: 16,
-  borderRadius: 12,
-},
+    width: '100%',
+    height: 250,
+    marginTop: 16,
+    borderRadius: 12,
+  },
 });
 
 export default VideoDetection;
