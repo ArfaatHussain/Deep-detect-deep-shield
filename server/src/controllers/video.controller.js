@@ -4,9 +4,10 @@ import { Video } from '../models/video.model.js';
 
 export const saveDeepfakeVideoResult = asyncHandler(async (req, res) => {
 
-    const {prediction, probability, explanation_text, original_video_url, annotated_video_url, owner} = req.body;
+    const {prediction, probability, explanation, original_video_url, annotated_video_url, owner} = req.body;
 
-    if(!prediction || !probability || !explanation_text || !original_video_url || !owner) {
+    console.log("Received request to save deepfake video result:", req.body);
+    if(!prediction || !probability || !explanation || !original_video_url || !owner) {
         throw new ApiError(400, "Missing required fields");
     }
 
@@ -14,7 +15,7 @@ export const saveDeepfakeVideoResult = asyncHandler(async (req, res) => {
         owner,
         videoUrl: original_video_url,
         detectionResult: {
-            explanation: explanation_text,
+            explanation: explanation,
             class: prediction,
             resultVideo: annotated_video_url || "",
             confidenceScore: probability

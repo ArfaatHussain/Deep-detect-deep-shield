@@ -65,8 +65,10 @@ const clearHistory = asyncHandler(async (req, res) => {
     // Check if history exists
     const imageCount = await Image.countDocuments({ owner: userId });
     const videoCount = await Video.countDocuments({ owner: userId });
+    const tamperProofCount = await TamperProof.countDocuments({ owner: userId });
+    const tamperProofHistoryCount = await TamperProofHistory.countDocuments({ owner: userId });
 
-    if (imageCount === 0 && videoCount === 0) {
+    if (imageCount === 0 && videoCount === 0 && tamperProofCount === 0 && tamperProofHistoryCount === 0) {
         return res.status(200).json({
             success: false,
             message: "No history found",

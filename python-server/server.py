@@ -102,6 +102,9 @@ def predict():
             output = model(img_tensor)
             prob = torch.sigmoid(output)
             pred_class = (prob >= 0.5).float().item()
+            # Confidence is based on distance from 0.5 (decision boundary):
+            # closer to 0.5 → low confidence, closer to 0 or 1 → high confidence
+            # scaled to range [0, 1]
             confidence_score = abs(prob.item() - 0.5) * 2
 
         label = "Fake Image" if pred_class == 0 else "Real Image"
@@ -329,7 +332,7 @@ def predict_video():
             "annotated_video_url": annotated_video_url,
             "prediction": label,
             "probability": round(float(prob), 4),
-            "explanation_text": _build_explanation_text(label, prob, explanation),
+            "explanation": _build_explanation_text(label, prob, explanation),
             "owner": owner
         }
         send_to_backend(request_data, endpoint="/video/save-result")
@@ -337,7 +340,7 @@ def predict_video():
         return jsonify({
             "prediction":            label,
             "probability":            round(float(prob), 4),
-            "explanation_text":      _build_explanation_text(label, prob, explanation),
+            "explanation":      _build_explanation_text(label, prob, explanation),
             "original_video_url":    original_video_url,   # ← uploaded input video
             "annotated_video_url":   annotated_video_url,  # ← XAI output video
         })

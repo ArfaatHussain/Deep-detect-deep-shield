@@ -199,7 +199,7 @@ const ImageDetection = ({ navigation }) => {
                 color={result.classification.toLowerCase().includes("fake") ? '#EF4444' : '#10B981'}
               />
               <Text style={styles.resultTitle}>Classification: {result.classification}</Text>
-              <Text style={styles.resultConfidence}>Confidence Score: {result.confidence}%</Text>
+              {/* <Text style={styles.resultConfidence}>Confidence Score: {result.confidence}%</Text> */}
               <Text style={styles.resultDetails}>{result.explanation}</Text>
             </View>
 
