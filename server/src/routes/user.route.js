@@ -3,7 +3,6 @@ import {
   getAllUsers,
   getHistory,
   clearHistory,
-  updateProfile,
   requestProfileOTP,
   verifyAndUpdateProfile
 } from "../controllers/user.controller.js";
@@ -17,11 +16,8 @@ userRouter.route("/getAllUsers").get(getAllUsers);
 userRouter.route("/getHistory/:userId").get(getHistory);
 
 userRouter.post("/profile/request-otp", requestProfileOTP);
-userRouter.post("/profile/verify-and-update", verifyAndUpdateProfile);
+userRouter.post("/profile/verify-and-update", upload.single("avatar"), verifyAndUpdateProfile);
 
-userRouter.route("/update/:userId").patch(upload.single("avatar"),updateProfile)
-
-// clear user history ✅ CLEAN URL
 userRouter.delete("/clearHistory/:userId", clearHistory);
 
 export default userRouter;
