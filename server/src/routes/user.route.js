@@ -3,8 +3,7 @@ import {
   getAllUsers,
   getHistory,
   clearHistory,
-  requestProfileOTP,
-  verifyAndUpdateProfile
+  updateProfile
 } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 const userRouter = Router();
@@ -15,8 +14,7 @@ userRouter.route("/getAllUsers").get(getAllUsers);
 // get user history
 userRouter.route("/getHistory/:userId").get(getHistory);
 
-userRouter.post("/profile/request-otp", requestProfileOTP);
-userRouter.post("/profile/verify-and-update", upload.single("avatar"), verifyAndUpdateProfile);
+userRouter.route("/update/:userId").patch(upload.single("avatar"),updateProfile)
 
 userRouter.delete("/clearHistory/:userId", clearHistory);
 

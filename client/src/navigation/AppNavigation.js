@@ -20,6 +20,7 @@ import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import HelpSupportScreen from "../screens/HelpAndSupportScreen";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
+import OTPVerificationScreen from "../screens/OTPVerificationScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -110,6 +111,7 @@ const AppNavigation = ({ darkTheme }) => {
                 <Stack.Screen name="HelpSupport" component={HelpSupportScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="otp-verification" component={OTPVerificationScreen} options={{ headerShown: false }} />
             </Stack.Navigator>
         </NavigationContainer>
     );

@@ -20,6 +20,12 @@ import imageRouter from "./routes/image.route.js"
 import tamperRouter from "./routes/tamper.route.js"
 import videoRouter from "./routes/video.route.js"
 
+
+// Testing route
+app.get("/", (req, res) => {
+    res.json({ message: "Node server is running!" });
+})
+
 app.use("/auth",authRouter)
 app.use("/user",userRouter)
 app.use("/image",imageRouter)

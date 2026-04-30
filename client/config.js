@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-import { DEV_API_URL, PROD_API_URL } from "@env";
 
 const getLocalIP = () => {
   const debuggerHost =
@@ -16,7 +15,7 @@ const getLocalIP = () => {
 
 const isDev = __DEV__;
 
-// Deepfake detection server (port 5000)
+// Node server (port 5000)
 export const API_URL = `http://${getLocalIP()}:5000`
 
 export const PYTHON_API_URL = `http://${getLocalIP()}:5001`

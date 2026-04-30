@@ -17,12 +17,14 @@ export function generateOTP() {
 // ─── Store OTP ─────────────────────────────────────────────────────────────────
 export function storeOTP(email, otp, purpose = 'verification') {
   const key = `${email}:${purpose}`;
+  console.log("Storing OTP with key: ", key);
   const existing = otpStore.get(key);
 
-  // Enforce resend cooldown
-  if (existing && Date.now() < existing.resendAfter) {
-    const waitSeconds = Math.ceil((existing.resendAfter - Date.now()) / 1000);
-    throw new Error(`Please wait ${waitSeconds}s before requesting a new code.`);
+  // Remove any existing OTP entries for this email (any purpose)
+  for (const k of otpStore.keys()) {
+    if (k.startsWith(`${email}:`)) {
+      otpStore.delete(k);
+    }
   }
 
   otpStore.set(key, {
@@ -36,7 +38,9 @@ export function storeOTP(email, otp, purpose = 'verification') {
 // ─── Verify OTP ────────────────────────────────────────────────────────────────
 export function verifyOTP(email, submittedOTP, purpose = 'verification') {
   const key = `${email}:${purpose}`;
+  console.log("Key: ", key);
   const record = otpStore.get(key);
+  console.log("Record: ", record);
 
   if (!record) {
     return { valid: false, error: 'No verification code found. Please request a new one.' };

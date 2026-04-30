@@ -90,87 +90,56 @@ const clearHistory = asyncHandler(async (req, res) => {
     });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PROFILE CHANGE — Request OTP
-// ══════════════════════════════════════════════════════════════════════════════
-const requestProfileOTP = asyncHandler(async (req, res) => {
-    const email = req.body.email; // replace with req.user.email if using JWT middleware
 
-    if (!email) {
-        throw new ApiError(400, "Email is required");
-    }
+const updateProfile = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const { email, fullName, username, newPassword, oldPassword } = req.body;
 
-    const otp = generateOTP();
-    storeOTP(email, otp, "profile_change");
-    await sendOTPEmail(email, otp, "profile_change");
+    if (!userId) throw new ApiError(400, "User id is missing")
 
-    res.status(200).json({
-        message: "Confirmation code sent to your email.",
-    });
-});
+    const user = await User.findById(userId)
+    if (!user) throw new ApiError(404, "User not found")
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PROFILE CHANGE — Verify OTP and update
-// ══════════════════════════════════════════════════════════════════════════════
-const verifyAndUpdateProfile = asyncHandler(async (req, res) => {
-    const { email, otp, newEmail, fullName, username, newPassword, oldPassword } = req.body;
-
-    if (!email || !otp) {
-        throw new ApiError(400, "email and otp are required");
-    }
-
-    const otpResult = verifyOTP(email, otp, "profile_change");
-    if (!otpResult.valid) {
-        throw new ApiError(400, otpResult.error);
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) throw new ApiError(404, "User not found");
-
-    // ✅ Check new email & username not taken by another user
-    if (newEmail) {
-        const emailExists = await User.findOne({ email: newEmail, _id: { $ne: user._id } });
-        if (emailExists) throw new ApiError(409, "Email already in use");
+    // ✅ Check email & username not taken by another user
+    if (email) {
+        const emailExists = await User.findOne({ email, _id: { $ne: userId } })
+        if (emailExists) throw new ApiError(409, "Email already in use")
     }
 
     if (username) {
-        const usernameExists = await User.findOne({ username, _id: { $ne: user._id } });
-        if (usernameExists) throw new ApiError(409, "Username already taken");
+        const usernameExists = await User.findOne({ username, _id: { $ne: userId } })
+        if (usernameExists) throw new ApiError(409, "Username already taken")
     }
 
-    let fieldsToUpdate = {};
-    if (newEmail) fieldsToUpdate.email = newEmail;
-    if (fullName) fieldsToUpdate.fullName = fullName;
-    if (username) fieldsToUpdate.username = username;
+    let fieldsToUpdate = {}
+    if (email) fieldsToUpdate.email = email
+    if (fullName) fieldsToUpdate.fullName = fullName
+    if (username) fieldsToUpdate.username = username
     if (req.file) {
-        const response = await uploadToCloudinary(req.file.path);
-        fieldsToUpdate.avatar = response.secure_url;
+        const response = await uploadToCloudinary(req.file.path)
+        fieldsToUpdate.avatar = response.secure_url
     }
 
     if (newPassword) {
-        if (!oldPassword) throw new ApiError(400, "Old password is required");
-        const isPasswordMatched = await bcrypt.compare(oldPassword, user.password);
-        if (!isPasswordMatched) throw new ApiError(401, "Old password is incorrect");
-        fieldsToUpdate.password = await bcrypt.hash(newPassword, 10);
+        if (!oldPassword) throw new ApiError(400, "Old password is required")
+        const isPasswordMatched = await bcrypt.compare(oldPassword, user.password)
+        if (!isPasswordMatched) throw new ApiError(401, "Old password is incorrect")
+        fieldsToUpdate.password = await bcrypt.hash(newPassword, 10)
     }
 
     if (Object.keys(fieldsToUpdate).length === 0) {
-        throw new ApiError(400, "No fields provided to update");
+        throw new ApiError(400, "No fields provided to update")
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-        user._id,
+    const updatedDocument = await User.findByIdAndUpdate(
+        userId,
         { $set: fieldsToUpdate },
         { new: true }
-    ).select('-password');
+    ).select('-password')
 
-    res.status(200).json({
-        success: true,
-        message: "Profile updated successfully.",
-        data: updatedUser
-    });
-});
+    res.status(200).json({ success: true, data: updatedDocument })
+})
 
 
 
-export { getAllUsers, getHistory, clearHistory, verifyAndUpdateProfile, requestProfileOTP}
+export { getAllUsers, getHistory, clearHistory, updateProfile}

@@ -12,14 +12,14 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
-import { register } from '../service/AuthService';
 import Toast from 'react-native-simple-toast';
 import { ThemeContext } from '../context/ThemeContext';
 import { getTheme } from '../context/theme';
+import { requestRegisterOTP } from '../service/AuthService';
 
 const SignupScreen = ({ navigation }) => {
-  const { darkTheme } = useContext(ThemeContext); 
-  const t = getTheme(darkTheme); 
+  const { darkTheme } = useContext(ThemeContext);
+  const t = getTheme(darkTheme);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -80,10 +80,6 @@ const SignupScreen = ({ navigation }) => {
       showToast('Username cannot contain spaces');
       return;
     }
-    if (!email.endsWith('@gmail.com')) {
-      showToast('Email must be a Gmail address');
-      return;
-    }
     if (password.length <= 5) {
       showToast('Password must be longer than 5 characters');
       return;
@@ -103,23 +99,20 @@ const SignupScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
-      const form = new FormData();
-      form.append('fullName', name);
-      form.append('username', username);
-      form.append('email', email);
-      form.append('password', password);
 
-      if (profileImage) {
-        form.append('avatar', {
-          uri: profileImage.uri,
-          type: profileImage.type || 'image/jpeg',
-          name: 'avatar.jpg',
-        });
+      const dataForOTP = {
+        fullName: name,
+        username,
+        email,
+        password
       }
 
-      const response = await register(form);
-      Toast.show('User created successfully');
-      navigation.navigate('Login');
+      await requestRegisterOTP(dataForOTP);
+
+      navigation.navigate('otp-verification', {
+        email,
+        formData: { email, username, password, fullName:name, profileImage }, 
+      });
     } catch (error) {
       if (error.response?.status === 409) {
         showToast('User already exists with this email or username');
