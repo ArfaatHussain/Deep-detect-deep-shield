@@ -11,6 +11,7 @@ import bcrypt from "bcrypt";
 import { uploadToCloudinary } from "../utils/cloudinary.js"
 import { sendOTPEmail } from "../utils/emailService.js";
 import { generateOTP, verifyOTP, cleanupExpiredOTPs, storeOTP } from "../utils/otpManager.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 
 const getAllUsers = asyncHandler(async (req, res) => {
