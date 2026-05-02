@@ -93,7 +93,7 @@ const clearHistory = asyncHandler(async (req, res) => {
 
 const updateProfile = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    const { email, fullName, username, newPassword, oldPassword } = req.body;
+    const { email, fullName, username, newPassword } = req.body;
 
     if (!userId) throw new ApiError(400, "User id is missing")
 
@@ -121,9 +121,6 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 
     if (newPassword) {
-        if (!oldPassword) throw new ApiError(400, "Old password is required")
-        const isPasswordMatched = await bcrypt.compare(oldPassword, user.password)
-        if (!isPasswordMatched) throw new ApiError(401, "Old password is incorrect")
         fieldsToUpdate.password = await bcrypt.hash(newPassword, 10)
     }
 
@@ -140,6 +137,26 @@ const updateProfile = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: updatedDocument })
 })
 
+const resetPassword = asyncHandler(async (req, res) => {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) throw new ApiError(400, "Email and new password is required");
+
+    const user = await User.findOne({ email });
+    if (!user) throw new ApiError(404, "User not found");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const rowAffected = await User.updateOne(
+        { email },
+        { $set: { password: hashedPassword } }
+    );
+
+    if (rowAffected.modifiedCount === 0) throw new ApiError(500, "Failed to reset password");
+
+    res.status(200).json(
+        new ApiResponse(200, null, "Password reset successfully")
+    );
+});
 
 
-export { getAllUsers, getHistory, clearHistory, updateProfile}
+export { getAllUsers, getHistory, clearHistory, updateProfile, resetPassword}

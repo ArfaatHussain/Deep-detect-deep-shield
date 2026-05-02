@@ -23,6 +23,16 @@ export const updateUser = async (userId, data) => {
   }
 };
 
+export const resetPassword = async (data) => {
+  try {
+    console.log('Calling:', `${API_URL}/user/reset-password`);
+    const response = await axios.patch(`${API_URL}/user/reset-password`, data)
+    return response
+  } catch (error) {
+    throw error
+  }
+}
+
 export const deleteHistory = async (userId) => {
   try {
     return axios.delete(`${API_URL}/user/clearHistory/${userId}`);

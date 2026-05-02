@@ -3,7 +3,8 @@ import {
   getAllUsers,
   getHistory,
   clearHistory,
-  updateProfile
+  updateProfile,
+  resetPassword
 } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 const userRouter = Router();
@@ -15,6 +16,8 @@ userRouter.route("/getAllUsers").get(getAllUsers);
 userRouter.route("/getHistory/:userId").get(getHistory);
 
 userRouter.route("/update/:userId").patch(upload.single("avatar"),updateProfile)
+
+userRouter.patch("/reset-password", resetPassword);
 
 userRouter.delete("/clearHistory/:userId", clearHistory);
 

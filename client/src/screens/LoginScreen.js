@@ -138,6 +138,12 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.buttonText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity 
+      style={{ alignSelf: 'flex-end', marginTop: 12 }}
+      onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={[styles.signupLink, { color: t.link }]}>Forgot password</Text>
+      </TouchableOpacity>
+
       {/* Signup Link */}
       <TouchableOpacity onPress={() => navigation.replace('Signup')}>
         <Text style={[styles.signupText, { color: t.textSecondary }]}>
