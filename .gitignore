@@ -4,6 +4,8 @@ server/.env
 server/uploads/
 server/src/config/service-account.json
 server/src/config/oauth2-client.json
+server/delete-cloudinary-data.js
+python server/trained_models/*.pth
 
 # Python (server)
 python-server/__pycache__/
