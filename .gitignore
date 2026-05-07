@@ -2,6 +2,8 @@
 server/node_modules/
 server/.env
 server/uploads/
+server/src/config/service-account.json
+server/src/config/oauth2-client.json
 
 # Python (server)
 python-server/__pycache__/
