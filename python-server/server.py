@@ -1,3 +1,21 @@
+import os
+import time
+import warnings
+
+# Suppress TensorFlow / oneDNN warnings
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0=all, 1=no INFO, 2=no WARNING, 3=no ERROR
+os.environ['TORCHDYNAMO_DISABLE'] = '1'        # ← disables torch.compile globally
+os.environ['TORCH_INDUCTOR_DISABLE'] = '1'     
+
+# Suppress Python warnings
+warnings.filterwarnings('ignore')
+
+# Suppress TensorFlow Python-level warnings
+import logging
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+logging.getLogger('absl').setLevel(logging.ERROR)
+
 import shutil
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -5,7 +23,6 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import io
-import os
 import cv2
 import numpy as np
 import uuid
@@ -13,7 +30,7 @@ import traceback
 
 from grad_cam_generator import create_gradcam_overlay, generate_layer_cam ,postprocess_cam
 from xai import analyze_heatmap_regions, generate_dynamic_explanation
-from face_extractor import detect_and_crop_face_and_hair
+from face_extractor import detect_and_crop_face
 from model import CustomXception  
 import timm
 from werkzeug.utils import secure_filename
@@ -23,6 +40,13 @@ from video_model import DeepfakeVideoDetector
 from deepfake_xai import ExplainableDeepfakeDetector
 from helpers import _build_explanation_text, _build_region_analysis, _encode_frames, upload_to_cloudinary
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+
+load_dotenv()  # ← This must be called before os.getenv()
+
+NODE_SERVER_URL = os.getenv('NODE_SERVER_URL')
+print("Targeting:", NODE_SERVER_URL)  # confirm it's set
+
 # -----------------------------
 # 📦 Setup and Model Loading
 # -----------------------------
@@ -85,7 +109,7 @@ def predict():
         img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
         # Detect and crop face
-        cropped_img = detect_and_crop_face_and_hair(img_cv)
+        cropped_img = detect_and_crop_face(img_cv)
         if cropped_img is None:
             return jsonify({"error": "No face detected in the image."}), 400
 
@@ -162,7 +186,7 @@ UPLOAD_DIR = "uploads"
 def send_to_backend(data, endpoint="/tamper/addDocumentToTamperProof"):
     try:
         requests.post(
-            "http://localhost:5000/"+endpoint,
+            f"{os.getenv('NODE_SERVER_URL')}{endpoint}",
             json=data,
             timeout=5
         )
@@ -351,7 +375,15 @@ def predict_video():
 
     finally:
         if os.path.exists(video_path):
-            os.remove(video_path)
+            for attempt in range(5):
+                try:
+                    os.remove(video_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.3)   # this will work once 'time' isn't shadowed
+            else:
+                app.logger.warning(f"Could not delete temp file: {video_path}")
+
         if os.path.exists(xai_dir):
             shutil.rmtree(xai_dir, ignore_errors=True)
 

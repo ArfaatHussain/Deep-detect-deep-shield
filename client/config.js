@@ -18,7 +18,7 @@ const isDev = __DEV__;
 // Node server (port 5000)
 export const API_URL = `http://${getLocalIP()}:5000`
 
-export const PYTHON_API_URL = `http://${getLocalIP()}:5001`
+export const PYTHON_API_URL = `http://${getLocalIP()}:5001` // NGROK URL for Python API (port 8000)
 
 console.log("🌐 API URL:", API_URL);
 console.log("🌐 Python API URL:", PYTHON_API_URL);

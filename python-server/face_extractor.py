@@ -1,38 +1,28 @@
 import cv2
-def detect_and_crop_face_and_hair(image):
+from retinaface import RetinaFace
+
+def detect_and_crop_face(image):
     if image is None:
-        print("[ERROR] Could not read the image.")
-        return None
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    if faceCascade.empty():
-        print("[ERROR] Failed to load Haar cascade classifier.")
+        print("[ERROR] Image is None.")
         return None
 
-    faces = faceCascade.detectMultiScale(
-        gray,
-        scaleFactor=1.3,
-        minNeighbors=3,
-        minSize=(30, 30)
-    )
+    faces = RetinaFace.detect_faces(image)  # accepts numpy array
 
-    if len(faces) == 0:
+    if not faces or not isinstance(faces, dict):
         print("[INFO] No faces found!")
         return None
 
-    print("[INFO] Found {0} Faces!".format(len(faces)))
+    print(f"[INFO] Found {len(faces)} face(s)!")
 
-    for (x, y, w, h) in faces:
-        # Adjust left space (shift the crop window to the right by 10% of width)
-        left_space_shift = int(w * 0.1)
-        left_x_new = x + left_space_shift
-        left_x_new = min(left_x_new, image.shape[1] - w)
+    # Take the largest face by area
+    best = max(faces.values(), key=lambda f: (
+        (f['facial_area'][2] - f['facial_area'][0]) *
+        (f['facial_area'][3] - f['facial_area'][1])
+    ))
 
-        expanded_y = max(y - int(h * 0.2), 0)
-        expanded_h = h + int(h * 0.3)
+    x1, y1, x2, y2 = map(int, best['facial_area'])
 
-        right_space_reduction = int(w * 0.2) 
-        right_w_new = w - right_space_reduction 
-        cropped_face_and_hair = image[expanded_y:expanded_y + expanded_h, left_x_new:left_x_new + right_w_new]
-        # cv2.imwrite("img.jpg",cropped_face_and_hair)
-        return cropped_face_and_hair
+    # Crop exactly what RetinaFace detected — no extra padding
+    cropped_face = image[y1:y2, x1:x2]
+
+    return cropped_face

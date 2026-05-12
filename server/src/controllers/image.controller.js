@@ -25,7 +25,6 @@ const detectImageForDeepfake = asyncHandler(async (req, res) => {
         User.findById(owner).lean().select('_id'),  // lean() + select() = faster query
         axios.post(`${process.env.PYTHON_APP_URL}/predict`, formData, {
             headers: { ...formData.getHeaders() },
-            timeout: 15000, // prevent hanging requests
         })
     ]);
 
